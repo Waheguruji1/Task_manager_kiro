@@ -1,0 +1,120 @@
+name: task_manager_kiro
+description: "A new Flutter project."
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+# The following defines the version and build number for your application.
+# A version number is three numbers separated by dots, like 1.2.43
+# followed by an optional build number separated by a +.
+# Both the version and the builder number may be overridden in flutter
+# build by specifying --build-name and --build-number, respectively.
+# In Android, build-name is used as versionName while build-number used as versionCode.
+# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
+# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+# In Windows, build-name is used as the major, minor, and patch parts
+# of the product and file versions while build-number is used as the build suffix.
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.0.0
+
+# Dependencies specify other packages that your package needs in order to work.
+# To automatically upgrade your package dependencies to the latest versions
+# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# dependencies can be manually updated by changing the version numbers below to
+# the latest version available on pub.dev. To see which dependencies have newer
+# versions available, run `flutter pub outdated`.
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^1.0.8
+  
+  # === TASK MANAGER APP DEPENDENCIES ===
+  
+  # Database Management
+  drift: ^2.14.1                    # Type-safe SQL database layer for Flutter
+                                    # Provides compile-time SQL validation and code generation
+                                    # Used for local task storage and data persistence
+  
+  sqlite3_flutter_libs: ^0.5.0     # SQLite3 native libraries for Flutter
+                                    # Required by Drift for SQLite database operations
+                                    # Provides cross-platform SQLite support
+  
+  # File System & Storage
+  path_provider: ^2.1.1            # Access to commonly used locations on the filesystem
+                                    # Used to get app documents directory for database storage
+  
+  path: ^1.8.3                     # Utilities for working with file and directory paths
+                                    # Used for path manipulation and joining
+  
+  shared_preferences: ^2.2.2       # Persistent storage for simple key-value pairs
+                                    # Used for user preferences and app settings
+  
+  # App Features
+  share_plus: ^7.2.1               # Cross-platform sharing functionality
+                                    # Enables users to share tasks and lists with other apps
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # The "flutter_lints" package below contains a set of recommended lints to
+  # encourage good coding practices. The lint set provided by the package is
+  # activated in the `analysis_options.yaml` file located at the root of your
+  # package. See that file for information about deactivating specific lint
+  # rules and activating additional ones.
+  flutter_lints: ^5.0.0
+  
+  # === DEVELOPMENT DEPENDENCIES ===
+  
+  # Code Generation Tools
+  drift_dev: ^2.14.1               # Development package for Drift ORM
+                                    # Generates type-safe database access code from table definitions
+                                    # Required for running `flutter packages pub run build_runner build`
+  
+  build_runner: ^2.4.7             # Build system for Dart code generation
+                                    # Executes code generators like drift_dev during development
+                                    # Run with: `dart run build_runner build` or `dart run build_runner watch`
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+
+  # To add assets to your application, add an assets section, like this:
+  assets:
+    - assets/icons/
+    - assets/fonts/
+
+  # An image asset can refer to one or more resolution-specific "variants", see
+  # https://flutter.dev/to/resolution-aware-images
+
+  # For details regarding adding assets from package dependencies, see
+  # https://flutter.dev/to/asset-from-package
+
+  # === CUSTOM FONTS CONFIGURATION ===
+  
+  # Sour Gummy Font Family
+  # A playful, rounded font that enhances the user experience
+  # Download from: https://fonts.google.com/specimen/Sour+Gummy
+  fonts:
+    - family: SourGummy              # Font family name used in TextStyle(fontFamily: 'SourGummy')
+      fonts:
+        - asset: assets/fonts/SourGummy-Regular.ttf  # Regular weight font file
+          # Additional weights can be added here:
+          # - asset: assets/fonts/SourGummy-Bold.ttf
+          #   weight: 700
+          # - asset: assets/fonts/SourGummy-Light.ttf  
+          #   weight: 300
