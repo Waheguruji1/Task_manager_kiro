@@ -277,10 +277,22 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                           _isRoutine = value;
                         });
                       },
-                      activeThumbColor: AppTheme.purplePrimary,
-                      activeTrackColor: AppTheme.purpleLight.withValues(alpha: 0.5),
-                      inactiveThumbColor: AppTheme.secondaryText,
-                      inactiveTrackColor: AppTheme.borderColor,
+                      thumbColor: WidgetStateProperty.resolveWith<Color>(
+                        (Set<WidgetState> states) {
+                          if (states.contains(WidgetState.selected)) {
+                            return AppTheme.purplePrimary;
+                          }
+                          return AppTheme.secondaryText;
+                        },
+                      ),
+                      trackColor: WidgetStateProperty.resolveWith<Color>(
+                        (Set<WidgetState> states) {
+                          if (states.contains(WidgetState.selected)) {
+                            return AppTheme.purplePrimary.withValues(alpha: 0.5);
+                          }
+                          return AppTheme.borderColor;
+                        },
+                      ),
                     ),
                   ],
                 ),
