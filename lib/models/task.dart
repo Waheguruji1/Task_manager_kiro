@@ -23,6 +23,12 @@ class Task {
   
   /// Timestamp when the task was completed (null if not completed)
   final DateTime? completedAt;
+  
+  /// Reference to routine task ID if this is a daily instance of a routine task
+  final int? routineTaskId;
+  
+  /// Date for which this task instance is created (for routine task instances)
+  final DateTime? taskDate;
 
   /// Creates a new Task instance
   /// 
@@ -38,6 +44,8 @@ class Task {
     this.isRoutine = false,
     required this.createdAt,
     this.completedAt,
+    this.routineTaskId,
+    this.taskDate,
   }) : assert(title.trim().isNotEmpty, 'Task title cannot be empty');
 
   /// Creates a copy of this task with optionally updated values
@@ -52,6 +60,8 @@ class Task {
     bool? isRoutine,
     DateTime? createdAt,
     DateTime? completedAt,
+    int? routineTaskId,
+    DateTime? taskDate,
   }) {
     return Task(
       id: id ?? this.id,
@@ -61,6 +71,8 @@ class Task {
       isRoutine: isRoutine ?? this.isRoutine,
       createdAt: createdAt ?? this.createdAt,
       completedAt: completedAt ?? this.completedAt,
+      routineTaskId: routineTaskId ?? this.routineTaskId,
+      taskDate: taskDate ?? this.taskDate,
     );
   }
 
@@ -76,6 +88,8 @@ class Task {
       'isRoutine': isRoutine,
       'createdAt': createdAt.toIso8601String(),
       'completedAt': completedAt?.toIso8601String(),
+      'routineTaskId': routineTaskId,
+      'taskDate': taskDate?.toIso8601String(),
     };
   }
 
@@ -92,6 +106,10 @@ class Task {
       createdAt: DateTime.parse(json['createdAt'] as String),
       completedAt: json['completedAt'] != null 
           ? DateTime.parse(json['completedAt'] as String)
+          : null,
+      routineTaskId: json['routineTaskId'] as int?,
+      taskDate: json['taskDate'] != null 
+          ? DateTime.parse(json['taskDate'] as String)
           : null,
     );
   }
@@ -114,7 +132,9 @@ class Task {
         other.isCompleted == isCompleted &&
         other.isRoutine == isRoutine &&
         other.createdAt == createdAt &&
-        other.completedAt == completedAt;
+        other.completedAt == completedAt &&
+        other.routineTaskId == routineTaskId &&
+        other.taskDate == taskDate;
   }
 
   /// Hash code based on all properties
@@ -128,6 +148,8 @@ class Task {
       isRoutine,
       createdAt,
       completedAt,
+      routineTaskId,
+      taskDate,
     );
   }
 

@@ -33,6 +33,12 @@ class Tasks extends Table {
   
   /// Completion timestamp - null until task is completed
   DateTimeColumn get completedAt => dateTime().nullable()();
+  
+  /// Reference to routine task ID if this is a daily instance of a routine task
+  IntColumn get routineTaskId => integer().nullable()();
+  
+  /// Date for which this task instance is created (for routine task instances)
+  DateTimeColumn get taskDate => dateTime().nullable()();
 }
 
 /// Main database class for the Task Manager app
@@ -46,7 +52,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Database schema version for migrations
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   /// Database migration logic and index creation
   @override
@@ -87,39 +93,40 @@ class AppDatabase extends _$AppDatabase {
           CREATE INDEX IF NOT EXISTS idx_tasks_title 
           ON tasks (title);
         ''');
+        
+        // Index for routine task ID references
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_tasks_routine_task_id 
+          ON tasks (routine_task_id);
+        ''');
+        
+        // Index for task date
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_tasks_task_date 
+          ON tasks (task_date);
+        ''');
       },
       onUpgrade: (Migrator m, int from, int to) async {
-        // Future schema upgrades will be handled here
+        // Handle schema upgrades
         if (from < 2) {
-          // Example: Add indexes if upgrading from version 1
+          // Add new columns for routine task management
           await customStatement('''
-            CREATE INDEX IF NOT EXISTS idx_tasks_is_routine 
-            ON tasks (is_routine);
+            ALTER TABLE tasks ADD COLUMN routine_task_id INTEGER;
           ''');
           
           await customStatement('''
-            CREATE INDEX IF NOT EXISTS idx_tasks_is_completed 
-            ON tasks (is_completed);
+            ALTER TABLE tasks ADD COLUMN task_date INTEGER;
+          ''');
+          
+          // Add indexes for new columns
+          await customStatement('''
+            CREATE INDEX IF NOT EXISTS idx_tasks_routine_task_id 
+            ON tasks (routine_task_id);
           ''');
           
           await customStatement('''
-            CREATE INDEX IF NOT EXISTS idx_tasks_created_at 
-            ON tasks (created_at);
-          ''');
-          
-          await customStatement('''
-            CREATE INDEX IF NOT EXISTS idx_tasks_completed_at 
-            ON tasks (completed_at);
-          ''');
-          
-          await customStatement('''
-            CREATE INDEX IF NOT EXISTS idx_tasks_routine_completed 
-            ON tasks (is_routine, is_completed);
-          ''');
-          
-          await customStatement('''
-            CREATE INDEX IF NOT EXISTS idx_tasks_title 
-            ON tasks (title);
+            CREATE INDEX IF NOT EXISTS idx_tasks_task_date 
+            ON tasks (task_date);
           ''');
         }
       },

@@ -72,7 +72,7 @@ class TaskContainer extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: AppTheme.borderColor,
+            color: AppTheme.borderWhite,
             width: 1,
           ),
         ),
@@ -94,29 +94,15 @@ class TaskContainer extends StatelessWidget {
             child: InkWell(
               onTap: onAddTask,
               borderRadius: BorderRadius.circular(24),
-              splashColor: AppTheme.purplePrimary.withValues(alpha: 0.2),
-              highlightColor: AppTheme.purplePrimary.withValues(alpha: 0.1),
+              splashColor: AppTheme.greyPrimary.withValues(alpha: 0.2),
+              highlightColor: AppTheme.greyPrimary.withValues(alpha: 0.1),
               child: Container(
                 padding: const EdgeInsets.all(AppTheme.spacingS + 2),
-                decoration: BoxDecoration(
-                  color: AppTheme.purplePrimary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: AppTheme.purplePrimary.withValues(alpha: 0.4),
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.purplePrimary.withValues(alpha: 0.1),
-                      offset: const Offset(0, 1),
-                      blurRadius: 2,
-                    ),
-                  ],
-                ),
+                decoration: AppTheme.plusIconDecoration,
                 child: const Icon(
                   Icons.add,
                   size: 20,
-                  color: AppTheme.purplePrimary,
+                  color: AppTheme.primaryText,
                 ),
               ),
             ),
@@ -194,17 +180,17 @@ class TaskContainer extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppTheme.spacingM),
             decoration: BoxDecoration(
-              color: AppTheme.purplePrimary.withValues(alpha: 0.1),
+              color: AppTheme.greyPrimary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: AppTheme.purplePrimary.withValues(alpha: 0.2),
+                color: AppTheme.borderWhite.withValues(alpha: 0.2),
                 width: 1,
               ),
             ),
             child: Icon(
               Icons.task_alt_outlined,
               size: 32,
-              color: AppTheme.purplePrimary.withValues(alpha: 0.7),
+              color: AppTheme.greyPrimary.withValues(alpha: 0.7),
             ),
           ),
           

@@ -109,3 +109,16 @@
   - Perform final testing on different screen sizes and orientations
   - Add app icon and ensure proper asset integration
   - _Requirements: 5, 7, 8_
+
+- [ ] 16. Integrate Riverpod state management
+  - Add flutter_riverpod dependency to pubspec.yaml
+  - Wrap main app with ProviderScope for Riverpod initialization
+  - Create providers for database service, preferences service, and share service
+  - Implement StateNotifier providers for task management state
+  - Create providers for user data and authentication state
+  - Refactor existing StatefulWidgets to use ConsumerWidget and ConsumerStatefulWidget
+  - Replace setState calls with Riverpod state management patterns
+  - Implement proper provider disposal and cleanup
+  - Add provider observers for debugging and logging
+  - Update all screens and widgets to use Riverpod providers instead of direct service calls
+  - _Requirements: 9, 10_

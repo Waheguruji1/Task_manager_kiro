@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'utils/theme.dart';
 import 'utils/constants.dart';
 import 'utils/error_handler.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/home_screen.dart';
-import 'services/preferences_service.dart';
-import 'services/database_service.dart';
 import 'widgets/app_icon.dart';
+import 'providers/providers.dart';
+import 'providers/provider_observer.dart';
 
 void main() {
   // Ensure Flutter binding is initialized
@@ -33,7 +34,12 @@ void main() {
     ),
   );
   
-  runApp(const TaskManagerApp());
+  runApp(
+    ProviderScope(
+      observers: [AppProviderObserver()],
+      child: const TaskManagerApp(),
+    ),
+  );
 }
 
 class TaskManagerApp extends StatelessWidget {
@@ -84,14 +90,14 @@ class TaskManagerApp extends StatelessWidget {
 /// 
 /// Handles initial app setup and navigation logic based on user data.
 /// Checks for existing username and navigates to appropriate screen.
-class AppInitializer extends StatefulWidget {
+class AppInitializer extends ConsumerStatefulWidget {
   const AppInitializer({super.key});
 
   @override
-  State<AppInitializer> createState() => _AppInitializerState();
+  ConsumerState<AppInitializer> createState() => _AppInitializerState();
 }
 
-class _AppInitializerState extends State<AppInitializer> with WidgetsBindingObserver {
+class _AppInitializerState extends ConsumerState<AppInitializer> with WidgetsBindingObserver {
   bool _hasError = false;
   String? _errorMessage;
 
@@ -149,7 +155,7 @@ class _AppInitializerState extends State<AppInitializer> with WidgetsBindingObse
   void _handleAppDetached() async {
     // Cleanup database connection when app is terminated
     try {
-      final databaseService = await DatabaseService.getInstance();
+      final databaseService = await ref.read(asyncDatabaseServiceProvider.future);
       await databaseService.close();
       ErrorHandler.logError('Database connection closed successfully', context: 'App lifecycle', type: ErrorType.unknown);
     } catch (e) {
@@ -160,15 +166,12 @@ class _AppInitializerState extends State<AppInitializer> with WidgetsBindingObse
   /// Initialize app and determine initial navigation
   Future<void> _initializeApp() async {
     try {
-      // Initialize database service first
-      final databaseService = await DatabaseService.getInstance();
-      await databaseService.initialize();
+      // Initialize services using Riverpod providers
+      await ref.read(asyncDatabaseServiceProvider.future);
+      await ref.read(asyncPreferencesServiceProvider.future);
       
-      // Initialize preferences service
-      final preferencesService = await PreferencesService.getInstance();
-      
-      // Check if user has already entered their name
-      final hasUserName = await preferencesService.hasUserName();
+      // Check if user has already entered their name using provider
+      final hasUserName = await ref.read(hasUserNameProvider.future);
       
       // Add a small delay for smooth transition
       await Future.delayed(const Duration(milliseconds: 500));
@@ -264,14 +267,14 @@ class _AppInitializerState extends State<AppInitializer> with WidgetsBindingObse
                 icon: const Icon(Icons.refresh),
                 label: const Text('Retry'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.purplePrimary,
+                  backgroundColor: AppTheme.greyPrimary,
                   foregroundColor: AppTheme.primaryText,
                 ),
               ),
             ] else ...[
               // Loading state
               const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.purplePrimary),
+                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.greyPrimary),
               ),
             ],
           ],

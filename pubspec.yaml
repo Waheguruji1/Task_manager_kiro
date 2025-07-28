@@ -59,6 +59,11 @@ dependencies:
   # App Features
   share_plus: ^7.2.1               # Cross-platform sharing functionality
                                     # Enables users to share tasks and lists with other apps
+  
+  # State Management
+  flutter_riverpod: ^2.4.9         # Reactive state management framework
+                                    # Provides compile-time safe dependency injection
+                                    # Used for managing app state and service dependencies
 
 dev_dependencies:
   flutter_test:

@@ -4,13 +4,7 @@ import 'constants.dart';
 import 'theme.dart';
 
 /// Error types that can occur in the app
-enum ErrorType {
-  database,
-  preferences,
-  validation,
-  network,
-  unknown,
-}
+enum ErrorType { database, preferences, validation, network, unknown }
 
 /// Custom exception class for app-specific errors
 class AppException implements Exception {
@@ -44,7 +38,7 @@ class ErrorHandler {
     ErrorType type = ErrorType.unknown,
   }) {
     final errorMessage = _formatErrorMessage(error, context, type);
-    
+
     if (kDebugMode) {
       // In debug mode, print to console
       print('ERROR: $errorMessage');
@@ -65,13 +59,13 @@ class ErrorHandler {
     ErrorType type,
   ) {
     final buffer = StringBuffer();
-    
+
     if (context != null) {
       buffer.write('[$context] ');
     }
-    
+
     buffer.write('[${type.name.toUpperCase()}] ');
-    
+
     if (error is AppException) {
       buffer.write(error.message);
       if (error.originalError != null) {
@@ -80,21 +74,21 @@ class ErrorHandler {
     } else {
       buffer.write(error.toString());
     }
-    
+
     return buffer.toString();
   }
 
   /// Handle database errors and return user-friendly message
   static String handleDatabaseError(dynamic error, {String? context}) {
     logError(error, context: context ?? 'Database', type: ErrorType.database);
-    
+
     if (error is AppException) {
       return error.message;
     }
-    
+
     // Map common database errors to user-friendly messages
     final errorString = error.toString().toLowerCase();
-    
+
     if (errorString.contains('database') && errorString.contains('locked')) {
       return AppStrings.errorDatabaseLocked;
     } else if (errorString.contains('no such table')) {
@@ -108,34 +102,42 @@ class ErrorHandler {
 
   /// Handle preferences errors and return user-friendly message
   static String handlePreferencesError(dynamic error, {String? context}) {
-    logError(error, context: context ?? 'Preferences', type: ErrorType.preferences);
-    
+    logError(
+      error,
+      context: context ?? 'Preferences',
+      type: ErrorType.preferences,
+    );
+
     if (error is AppException) {
       return error.message;
     }
-    
+
     return AppStrings.errorPreferences;
   }
 
   /// Handle validation errors
   static String handleValidationError(dynamic error, {String? context}) {
-    logError(error, context: context ?? 'Validation', type: ErrorType.validation);
-    
+    logError(
+      error,
+      context: context ?? 'Validation',
+      type: ErrorType.validation,
+    );
+
     if (error is AppException) {
       return error.message;
     }
-    
+
     return AppStrings.errorValidation;
   }
 
   /// Handle unknown errors
   static String handleUnknownError(dynamic error, {String? context}) {
     logError(error, context: context ?? 'Unknown', type: ErrorType.unknown);
-    
+
     if (error is AppException) {
       return error.message;
     }
-    
+
     return AppStrings.errorGeneral;
   }
 
@@ -147,22 +149,15 @@ class ErrorHandler {
     SnackBarAction? action,
   }) {
     if (!context.mounted) return;
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            const Icon(
-              Icons.error_outline,
-              color: Colors.white,
-              size: 20,
-            ),
+            const Icon(Icons.error_outline, color: Colors.white, size: 20),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(color: Colors.white),
-              ),
+              child: Text(message, style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -181,7 +176,7 @@ class ErrorHandler {
     Duration duration = const Duration(seconds: 3),
   }) {
     if (!context.mounted) return;
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -193,14 +188,11 @@ class ErrorHandler {
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(color: Colors.white),
-              ),
+              child: Text(message, style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
-        backgroundColor: AppTheme.purplePrimary,
+        backgroundColor: AppTheme.greyPrimary,
         behavior: SnackBarBehavior.floating,
         duration: duration,
       ),
@@ -214,22 +206,15 @@ class ErrorHandler {
     Duration duration = const Duration(seconds: 3),
   }) {
     if (!context.mounted) return;
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            const Icon(
-              Icons.warning_outlined,
-              color: Colors.black,
-              size: 20,
-            ),
+            const Icon(Icons.warning_outlined, color: Colors.black, size: 20),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(color: Colors.black),
-              ),
+              child: Text(message, style: const TextStyle(color: Colors.black)),
             ),
           ],
         ),
@@ -264,17 +249,11 @@ class ErrorDisplayWidget extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 64,
-              color: iconColor ?? Colors.red.shade400,
-            ),
+            Icon(icon, size: 64, color: iconColor ?? Colors.red.shade400),
             const SizedBox(height: AppTheme.spacingL),
             Text(
               message,
-              style: AppTheme.bodyLarge.copyWith(
-                color: AppTheme.secondaryText,
-              ),
+              style: AppTheme.bodyLarge.copyWith(color: AppTheme.secondaryText),
               textAlign: TextAlign.center,
             ),
             if (onRetry != null) ...[
@@ -284,7 +263,7 @@ class ErrorDisplayWidget extends StatelessWidget {
                 icon: const Icon(Icons.refresh),
                 label: const Text('Retry'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.purplePrimary,
+                  backgroundColor: AppTheme.greyPrimary,
                   foregroundColor: AppTheme.primaryText,
                 ),
               ),
@@ -314,7 +293,7 @@ class LoadingWidget extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.purplePrimary),
+            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.greyPrimary),
           ),
           if (showMessage) ...[
             const SizedBox(height: AppTheme.spacingM),
@@ -384,7 +363,7 @@ class EmptyStateWidget extends StatelessWidget {
                 icon: const Icon(Icons.add),
                 label: Text(actionText),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.purplePrimary,
+                  backgroundColor: AppTheme.greyPrimary,
                   foregroundColor: AppTheme.primaryText,
                 ),
               ),

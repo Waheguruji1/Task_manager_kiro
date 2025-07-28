@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 /// 
 /// This file contains the comprehensive theme data for the Task Manager app
 /// based on the theme.md specifications. It implements a dark theme with
-/// purple accents, white text, and proper color definitions.
+/// grey accents, white text, and proper color definitions.
 class AppTheme {
   // Private constructor to prevent instantiation
   AppTheme._();
 
   // Color Palette
   static const Color backgroundDark = Color(0xFF121212);
-  static const Color surfaceDark = Color(0xFF1E1E1E);
+  static const Color surfaceGrey = Color(0xFF2A2A2A);
   
   // Text Colors
   static const Color primaryText = Color(0xFFFFFFFF);
@@ -19,14 +19,14 @@ class AppTheme {
   static const Color disabledText = Color(0xFF9E9E9E);
   
   // Accent Colors
-  static const Color purplePrimary = Color(0xFF8E44AD);
-  static const Color purpleLight = Color(0xFFA569BD);
-  static const Color purpleDark = Color(0xFF7D3C98);
+  static const Color greyPrimary = Color(0xFF4A4A4A);
+  static const Color greyLight = Color(0xFF6A6A6A);
+  static const Color greyDark = Color(0xFF2A2A2A);
   
   // UI Element Colors
-  static const Color borderColor = Color(0x33FFFFFF); // 20% opacity white
+  static const Color borderWhite = Color(0xFFFFFFFF);
   static const Color iconPrimary = Color(0xFFFFFFFF);
-  static const Color iconAccent = Color(0xFF8E44AD);
+  static const Color iconBackground = Color(0xFF4A4A4A);
 
   // Font Family
   static const String primaryFontFamily = 'Sour Gummy';
@@ -98,14 +98,14 @@ class AppTheme {
       
       // Color Scheme
       colorScheme: const ColorScheme.dark(
-        primary: purplePrimary,
-        primaryContainer: purpleDark,
-        secondary: purpleLight,
-        surface: surfaceDark,
+        primary: greyPrimary,
+        primaryContainer: greyDark,
+        secondary: greyLight,
+        surface: surfaceGrey,
         onPrimary: primaryText,
         onSecondary: primaryText,
         onSurface: primaryText,
-        outline: borderColor,
+        outline: borderWhite,
       ),
 
       // Scaffold Theme
@@ -137,12 +137,12 @@ class AppTheme {
 
       // Card Theme
       cardTheme: CardThemeData(
-        color: surfaceDark,
+        color: surfaceGrey,
         elevation: taskContainerElevation,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(containerBorderRadius),
           side: const BorderSide(
-            color: borderColor,
+            color: borderWhite,
             width: 1,
           ),
         ),
@@ -152,11 +152,12 @@ class AppTheme {
       // Elevated Button Theme
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: purplePrimary,
+          backgroundColor: greyPrimary,
           foregroundColor: primaryText,
           elevation: buttonElevation,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(buttonBorderRadius),
+            side: const BorderSide(color: borderWhite, width: 2),
           ),
           padding: const EdgeInsets.symmetric(
             horizontal: 12,
@@ -169,8 +170,8 @@ class AppTheme {
       // Outlined Button Theme
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: purplePrimary,
-          side: const BorderSide(color: purplePrimary),
+          foregroundColor: primaryText,
+          side: const BorderSide(color: borderWhite, width: 2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(buttonBorderRadius),
           ),
@@ -185,18 +186,18 @@ class AppTheme {
       // Input Decoration Theme
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: surfaceDark,
+        fillColor: surfaceGrey,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(inputBorderRadius),
-          borderSide: const BorderSide(color: borderColor),
+          borderSide: const BorderSide(color: borderWhite),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(inputBorderRadius),
-          borderSide: const BorderSide(color: borderColor, width: 2),
+          borderSide: const BorderSide(color: borderWhite, width: 2),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(inputBorderRadius),
-          borderSide: const BorderSide(color: purplePrimary, width: 2),
+          borderSide: const BorderSide(color: borderWhite, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(inputBorderRadius),
@@ -220,12 +221,12 @@ class AppTheme {
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith<Color>((states) {
           if (states.contains(WidgetState.selected)) {
-            return purplePrimary;
+            return greyPrimary;
           }
           return Colors.transparent;
         }),
         checkColor: WidgetStateProperty.all(primaryText),
-        side: const BorderSide(color: borderColor, width: 2),
+        side: const BorderSide(color: borderWhite, width: 2),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(4),
         ),
@@ -233,9 +234,9 @@ class AppTheme {
 
       // Tab Bar Theme
       tabBarTheme: const TabBarThemeData(
-        labelColor: purplePrimary,
+        labelColor: primaryText,
         unselectedLabelColor: secondaryText,
-        indicatorColor: purplePrimary,
+        indicatorColor: borderWhite,
         labelStyle: headingMedium,
         unselectedLabelStyle: TextStyle(
           fontFamily: primaryFontFamily,
@@ -253,18 +254,18 @@ class AppTheme {
 
       // Floating Action Button Theme
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: purplePrimary,
+        backgroundColor: greyPrimary,
         foregroundColor: primaryText,
         elevation: buttonElevation,
       ),
 
       // Dialog Theme
       dialogTheme: DialogThemeData(
-        backgroundColor: surfaceDark,
+        backgroundColor: surfaceGrey,
         elevation: 4,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(containerBorderRadius),
-          side: const BorderSide(color: borderColor),
+          side: const BorderSide(color: borderWhite),
         ),
         titleTextStyle: headingMedium,
         contentTextStyle: bodyMedium,
@@ -272,7 +273,7 @@ class AppTheme {
 
       // Divider Theme
       dividerTheme: const DividerThemeData(
-        color: borderColor,
+        color: borderWhite,
         thickness: 1,
         space: spacingM,
       ),
@@ -283,9 +284,9 @@ class AppTheme {
   
   /// Task Container Decoration
   static BoxDecoration get taskContainerDecoration => BoxDecoration(
-    color: surfaceDark,
+    color: surfaceGrey,
     borderRadius: BorderRadius.circular(containerBorderRadius),
-    border: Border.all(color: borderColor, width: 1),
+    border: Border.all(color: borderWhite, width: 1),
     boxShadow: [
       BoxShadow(
         color: Colors.black.withValues(alpha: 0.1),
@@ -297,8 +298,9 @@ class AppTheme {
 
   /// Primary Button Decoration
   static BoxDecoration get primaryButtonDecoration => BoxDecoration(
-    color: purplePrimary,
+    color: greyPrimary,
     borderRadius: BorderRadius.circular(buttonBorderRadius),
+    border: Border.all(color: borderWhite, width: 2),
     boxShadow: [
       BoxShadow(
         color: Colors.black.withValues(alpha: 0.08),
@@ -312,6 +314,20 @@ class AppTheme {
   static BoxDecoration get secondaryButtonDecoration => BoxDecoration(
     color: Colors.transparent,
     borderRadius: BorderRadius.circular(buttonBorderRadius),
-    border: Border.all(color: purplePrimary, width: 1),
+    border: Border.all(color: borderWhite, width: 2),
+  );
+
+  /// Plus Icon Button Decoration
+  static BoxDecoration get plusIconDecoration => BoxDecoration(
+    color: greyPrimary,
+    shape: BoxShape.circle,
+    border: Border.all(color: borderWhite, width: 2),
+  );
+
+  /// Routine Task Label Decoration
+  static BoxDecoration get routineTaskLabelDecoration => BoxDecoration(
+    color: greyPrimary,
+    borderRadius: BorderRadius.circular(6),
+    border: Border.all(color: borderWhite, width: 1),
   );
 }

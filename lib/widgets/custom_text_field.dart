@@ -64,7 +64,7 @@ class CustomTextField extends StatelessWidget {
         prefixIcon: prefixIcon,
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: AppTheme.surfaceDark,
+        fillColor: AppTheme.surfaceGrey,
         contentPadding: contentPadding ?? const EdgeInsets.symmetric(
           horizontal: AppTheme.spacingM,
           vertical: AppTheme.spacingS,
@@ -88,7 +88,7 @@ class CustomTextField extends StatelessWidget {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppTheme.inputBorderRadius),
           borderSide: const BorderSide(
-            color: AppTheme.purplePrimary,
+            color: AppTheme.borderWhite,
             width: 2.0,
           ),
         ),
@@ -126,7 +126,7 @@ class CustomTextField extends StatelessWidget {
           fontSize: 16,
         ),
         floatingLabelStyle: const TextStyle(
-          color: AppTheme.purplePrimary,
+          color: AppTheme.primaryText,
           fontFamily: AppTheme.primaryFontFamily,
           fontSize: 14,
         ),

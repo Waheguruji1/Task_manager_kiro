@@ -35,23 +35,19 @@ class TaskItem extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: AppTheme.spacingS),
       padding: const EdgeInsets.all(AppTheme.spacingM),
       decoration: BoxDecoration(
-        color: task.isRoutine 
-            ? AppTheme.purplePrimary.withValues(alpha: 0.05)
-            : AppTheme.surfaceDark,
+        color: AppTheme.surfaceGrey,
         borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
         border: Border.all(
-          color: task.isRoutine 
-              ? AppTheme.purplePrimary.withValues(alpha: 0.4) 
-              : AppTheme.borderColor,
-          width: task.isRoutine ? 1.5 : 1,
+          color: AppTheme.borderWhite,
+          width: 1,
         ),
-        boxShadow: task.isRoutine ? [
+        boxShadow: [
           BoxShadow(
-            color: AppTheme.purplePrimary.withValues(alpha: 0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             offset: const Offset(0, 1),
             blurRadius: 3,
           ),
-        ] : null,
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,7 +80,7 @@ class TaskItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
         boxShadow: task.isCompleted ? [
           BoxShadow(
-            color: AppTheme.purplePrimary.withValues(alpha: 0.2),
+            color: AppTheme.greyPrimary.withValues(alpha: 0.2),
             offset: const Offset(0, 1),
             blurRadius: 2,
           ),
@@ -93,15 +89,11 @@ class TaskItem extends StatelessWidget {
       child: Checkbox(
         value: task.isCompleted,
         onChanged: (value) => _safeCallback(() => onToggle(value), 'toggle task completion'),
-        activeColor: AppTheme.purplePrimary,
+        activeColor: AppTheme.greyPrimary,
         checkColor: AppTheme.primaryText,
         side: BorderSide(
-          color: task.isCompleted 
-              ? AppTheme.purplePrimary 
-              : task.isRoutine 
-                  ? AppTheme.purplePrimary.withValues(alpha: 0.4)
-                  : AppTheme.borderColor,
-          width: task.isCompleted ? 2 : 1.5,
+          color: AppTheme.borderWhite,
+          width: 2,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(6),
@@ -152,27 +144,20 @@ class TaskItem extends StatelessWidget {
                   horizontal: AppTheme.spacingS,
                   vertical: 4,
                 ),
-                decoration: BoxDecoration(
-                  color: AppTheme.purplePrimary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppTheme.purplePrimary.withValues(alpha: 0.4),
-                    width: 1,
-                  ),
-                ),
+                decoration: AppTheme.routineTaskLabelDecoration,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.repeat,
                       size: 12,
-                      color: AppTheme.purplePrimary,
+                      color: AppTheme.primaryText,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       'Routine',
                       style: AppTheme.caption.copyWith(
-                        color: AppTheme.purplePrimary,
+                        color: AppTheme.primaryText,
                         fontWeight: FontWeight.w600,
                         fontSize: 11,
                       ),
@@ -198,14 +183,14 @@ class TaskItem extends StatelessWidget {
           child: InkWell(
             onTap: () => _safeCallback(onEdit, 'edit task'),
             borderRadius: BorderRadius.circular(16),
-            splashColor: AppTheme.purplePrimary.withValues(alpha: 0.1),
-            highlightColor: AppTheme.purplePrimary.withValues(alpha: 0.05),
+            splashColor: AppTheme.greyPrimary.withValues(alpha: 0.1),
+            highlightColor: AppTheme.greyPrimary.withValues(alpha: 0.05),
             child: Container(
               padding: const EdgeInsets.all(AppTheme.spacingS),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: AppTheme.borderColor.withValues(alpha: 0.3),
+                  color: AppTheme.borderWhite.withValues(alpha: 0.3),
                   width: 0.5,
                 ),
               ),

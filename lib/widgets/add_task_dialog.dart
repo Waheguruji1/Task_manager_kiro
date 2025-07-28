@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/task.dart';
-import '../services/database_service.dart';
 import '../utils/theme.dart';
 import '../utils/error_handler.dart';
 import '../utils/constants.dart';
 import '../utils/validation.dart';
 import '../utils/responsive.dart';
+import '../providers/providers.dart';
 import 'custom_text_field.dart';
 
 /// Add/Edit Task Dialog Widget
 /// 
 /// A dialog widget for creating new tasks or editing existing ones.
 /// Provides form validation, error handling, and database integration.
-class AddTaskDialog extends StatefulWidget {
+class AddTaskDialog extends ConsumerStatefulWidget {
   /// The task to edit (null for creating a new task)
   final Task? task;
   
@@ -23,17 +24,17 @@ class AddTaskDialog extends StatefulWidget {
   final VoidCallback? onTaskSaved;
 
   const AddTaskDialog({
-    Key? key,
+    super.key,
     this.task,
     this.isRoutineTask = false,
     this.onTaskSaved,
-  }) : super(key: key);
+  });
 
   @override
-  State<AddTaskDialog> createState() => _AddTaskDialogState();
+  ConsumerState<AddTaskDialog> createState() => _AddTaskDialogState();
 }
 
-class _AddTaskDialogState extends State<AddTaskDialog> {
+class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -41,8 +42,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   late bool _isRoutine;
   bool _isLoading = false;
   String? _errorMessage;
-  
-  DatabaseService? _databaseService;
 
   @override
   void initState() {
@@ -60,20 +59,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     } else {
       // Creating new task
       _isRoutine = widget.isRoutineTask;
-    }
-    
-    _initializeDatabase();
-  }
-
-  /// Initialize database service
-  Future<void> _initializeDatabase() async {
-    try {
-      _databaseService = await DatabaseService.getInstance();
-    } catch (e) {
-      ErrorHandler.logError(e, context: 'Add task dialog database initialization', type: ErrorType.database);
-      setState(() {
-        _errorMessage = e is AppException ? e.message : AppStrings.errorDatabaseConnection;
-      });
     }
   }
 
@@ -100,13 +85,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       return;
     }
 
-    if (_databaseService == null) {
-      setState(() {
-        _errorMessage = AppStrings.errorDatabaseConnection;
-      });
-      return;
-    }
-
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -116,6 +94,9 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       final title = _titleController.text.trim();
       final description = _descriptionController.text.trim();
       
+      // Get database service from Riverpod provider
+      final databaseService = await ref.read(asyncDatabaseServiceProvider.future);
+      
       if (widget.task != null) {
         // Update existing task
         final updatedTask = widget.task!.copyWith(
@@ -124,7 +105,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
           isRoutine: _isRoutine,
         );
         
-        final success = await _databaseService!.updateTask(updatedTask);
+        final success = await databaseService.updateTask(updatedTask);
         
         if (success) {
           widget.onTaskSaved?.call();
@@ -145,7 +126,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
           createdAt: DateTime.now(),
         );
         
-        final taskId = await _databaseService!.createTask(newTask);
+        final taskId = await databaseService.createTask(newTask);
         
         if (taskId > 0) {
           widget.onTaskSaved?.call();
@@ -191,10 +172,10 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     final responsiveSpacing = ResponsiveUtils.getSpacing(context, AppTheme.spacingL);
     
     return Dialog(
-      backgroundColor: AppTheme.surfaceDark,
+      backgroundColor: AppTheme.surfaceGrey,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
-        side: const BorderSide(color: AppTheme.borderColor),
+        side: const BorderSide(color: AppTheme.borderWhite),
       ),
       child: Container(
         constraints: BoxConstraints(
@@ -248,9 +229,9 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   vertical: AppTheme.spacingS,
                 ),
                 decoration: BoxDecoration(
-                  color: AppTheme.surfaceDark,
+                  color: AppTheme.surfaceGrey,
                   borderRadius: BorderRadius.circular(AppTheme.inputBorderRadius),
-                  border: Border.all(color: AppTheme.borderColor, width: 1),
+                  border: Border.all(color: AppTheme.borderWhite, width: 1),
                 ),
                 child: Row(
                   children: [
@@ -280,7 +261,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                       thumbColor: WidgetStateProperty.resolveWith<Color>(
                         (Set<WidgetState> states) {
                           if (states.contains(WidgetState.selected)) {
-                            return AppTheme.purplePrimary;
+                            return AppTheme.greyPrimary;
                           }
                           return AppTheme.secondaryText;
                         },
@@ -288,9 +269,9 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                       trackColor: WidgetStateProperty.resolveWith<Color>(
                         (Set<WidgetState> states) {
                           if (states.contains(WidgetState.selected)) {
-                            return AppTheme.purplePrimary.withValues(alpha: 0.5);
+                            return AppTheme.greyPrimary.withValues(alpha: 0.5);
                           }
-                          return AppTheme.borderColor;
+                          return AppTheme.borderWhite;
                         },
                       ),
                     ),
@@ -337,7 +318,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                     child: OutlinedButton(
                       onPressed: _isLoading ? null : _cancel,
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppTheme.borderColor),
+                        side: const BorderSide(color: AppTheme.borderWhite),
                         foregroundColor: AppTheme.secondaryText,
                       ),
                       child: const Text('Cancel'),
@@ -351,7 +332,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _saveTask,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.purplePrimary,
+                        backgroundColor: AppTheme.greyPrimary,
                         foregroundColor: AppTheme.primaryText,
                       ),
                       child: _isLoading

@@ -51,6 +51,8 @@ class DatabaseService {
         isRoutine: Value(task.isRoutine),
         createdAt: Value(task.createdAt),
         completedAt: Value(task.completedAt),
+        routineTaskId: Value(task.routineTaskId),
+        taskDate: Value(task.taskDate),
       );
       
       return await _database!.into(_database!.tasks).insert(companion);
@@ -82,13 +84,25 @@ class DatabaseService {
     }
   }
   
-  /// Read everyday tasks (non-routine tasks)
+  /// Read everyday tasks (includes regular tasks and daily routine task instances)
   Future<List<Task>> getEverydayTasks() async {
     try {
-      final query = _database!.select(_database!.tasks)
-        ..where((t) => t.isRoutine.equals(false));
-      final taskDataList = await query.get();
-      return taskDataList.map((taskData) => _taskDataToTask(taskData)).toList();
+      final today = DateTime.now();
+      final todayStart = DateTime(today.year, today.month, today.day);
+      
+      // Get regular everyday tasks (non-routine tasks)
+      final regularTasksQuery = _database!.select(_database!.tasks)
+        ..where((t) => t.isRoutine.equals(false) & t.routineTaskId.isNull());
+      final regularTasks = await regularTasksQuery.get();
+      
+      // Get today's routine task instances
+      final routineInstancesQuery = _database!.select(_database!.tasks)
+        ..where((t) => t.routineTaskId.isNotNull() & t.taskDate.equals(todayStart));
+      final routineInstances = await routineInstancesQuery.get();
+      
+      // Combine both lists
+      final allTasks = [...regularTasks, ...routineInstances];
+      return allTasks.map((taskData) => _taskDataToTask(taskData)).toList();
     } catch (e) {
       ErrorHandler.logError(e, context: 'Get everyday tasks', type: ErrorType.database);
       throw AppException(
@@ -142,6 +156,8 @@ class DatabaseService {
         isRoutine: Value(task.isRoutine),
         createdAt: Value(task.createdAt),
         completedAt: Value(task.completedAt),
+        routineTaskId: Value(task.routineTaskId),
+        taskDate: Value(task.taskDate),
       );
       
       final updatedRows = await (_database!.update(_database!.tasks)
@@ -269,19 +285,92 @@ class DatabaseService {
     }
   }
   
-  /// Reset daily routine tasks (mark as incomplete for new day)
+  /// Create daily instances of routine tasks for today
+  Future<bool> createDailyRoutineTaskInstances() async {
+    try {
+      final today = DateTime.now();
+      final todayStart = DateTime(today.year, today.month, today.day);
+      
+      // Get all routine task templates
+      final routineTasksQuery = _database!.select(_database!.tasks)
+        ..where((t) => t.isRoutine.equals(true) & t.routineTaskId.isNull());
+      final routineTasks = await routineTasksQuery.get();
+      
+      // Check which routine tasks already have instances for today
+      final existingInstancesQuery = _database!.select(_database!.tasks)
+        ..where((t) => t.routineTaskId.isNotNull() & t.taskDate.equals(todayStart));
+      final existingInstances = await existingInstancesQuery.get();
+      final existingRoutineIds = existingInstances.map((t) => t.routineTaskId).toSet();
+      
+      // Create instances for routine tasks that don't have instances today
+      for (final routineTask in routineTasks) {
+        if (!existingRoutineIds.contains(routineTask.id)) {
+          final instanceCompanion = TasksCompanion(
+            title: Value(routineTask.title),
+            description: Value(routineTask.description),
+            isCompleted: const Value(false),
+            isRoutine: const Value(false), // Instance is not a routine task itself
+            createdAt: Value(DateTime.now()),
+            completedAt: const Value(null),
+            routineTaskId: Value(routineTask.id),
+            taskDate: Value(todayStart),
+          );
+          
+          await _database!.into(_database!.tasks).insert(instanceCompanion);
+        }
+      }
+      
+      return true;
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Create daily routine task instances', type: ErrorType.database);
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Create daily routine task instances'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
+
+  /// Delete routine task and all its instances
+  Future<bool> deleteRoutineTaskAndInstances(int routineTaskId) async {
+    try {
+      if (routineTaskId <= 0) {
+        throw AppException(
+          message: 'Invalid routine task ID for delete operation',
+          type: ErrorType.validation,
+        );
+      }
+      
+      // Delete all instances of this routine task
+      await (_database!.delete(_database!.tasks)
+            ..where((t) => t.routineTaskId.equals(routineTaskId)))
+          .go();
+      
+      // Delete the routine task template itself
+      final deletedRows = await (_database!.delete(_database!.tasks)
+            ..where((t) => t.id.equals(routineTaskId)))
+          .go();
+      
+      return deletedRows > 0;
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Delete routine task and instances', type: ErrorType.database);
+      if (e is AppException) {
+        rethrow;
+      }
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Delete routine task and instances'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
+
+  /// Reset daily routine tasks (create new instances for new day)
   Future<bool> resetDailyRoutineTasks() async {
     try {
-      final companion = TasksCompanion(
-        isCompleted: Value(false),
-        completedAt: Value(null),
-      );
-      
-      final updatedRows = await (_database!.update(_database!.tasks)
-            ..where((t) => t.isRoutine.equals(true) & t.isCompleted.equals(true)))
-          .write(companion);
-      
-      return updatedRows >= 0; // >= 0 because there might be no routine tasks to reset
+      // Create daily instances for today
+      await createDailyRoutineTaskInstances();
+      return true;
     } catch (e) {
       ErrorHandler.logError(e, context: 'Reset daily routine tasks', type: ErrorType.database);
       throw AppException(
@@ -326,6 +415,8 @@ class DatabaseService {
       isRoutine: taskData.isRoutine,
       createdAt: taskData.createdAt,
       completedAt: taskData.completedAt,
+      routineTaskId: taskData.routineTaskId,
+      taskDate: taskData.taskDate,
     );
   }
 }

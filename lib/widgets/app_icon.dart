@@ -28,7 +28,7 @@ class AppIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = backgroundColor ?? AppTheme.purplePrimary;
+    final bgColor = backgroundColor ?? AppTheme.greyPrimary;
     final foregroundColor = iconColor ?? AppTheme.primaryText;
     
     if (!showBackground) {

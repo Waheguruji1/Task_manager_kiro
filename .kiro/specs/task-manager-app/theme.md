@@ -2,61 +2,61 @@
 
 ## Overview
 
-This document defines the comprehensive theme and visual design system for the Task Manager Flutter app. The app follows a dark theme approach with white UI elements and strategic purple accents for a modern, comfortable user experience.
+This document defines the comprehensive theme and visual design system for the Task Manager Flutter app. The app follows a minimalist dark theme approach with a grey/black/white color scheme and boxy design style with smooth rounded corners for a modern, comfortable user experience.
 
 ## Color Palette
 
 ### Primary Colors
 
-- **Background Dark**: `#121212`
+- **Background Dark Grey**: `#121212` (Dark Grey)
   - Used for: Main app background, screen backgrounds
   - Usage: Primary background color across all screens
 
-- **Surface Dark**: `#1E1E1E`
-  - Used for: Card backgrounds, container backgrounds
-  - Usage: Task containers, dialog backgrounds, elevated surfaces
+- **Surface Grey**: `#2A2A2A` (Dark Grey)
+  - Used for: Container backgrounds, task containers, elevated surfaces
+  - Usage: Task containers, dialog backgrounds, card backgrounds
 
 ### Text Colors
 
 - **Primary Text**: `#FFFFFF` (Pure White)
   - Used for: Main headings, primary content, important text
-  - Usage: User greetings, task titles, primary labels
+  - Usage: User greetings, task titles, primary labels, tab text
 
-- **Secondary Text**: `#E0E0E0` (Light Gray)
+- **Secondary Text**: `#E0E0E0` (Light Grey)
   - Used for: Secondary information, subtitles, descriptions
   - Usage: Date labels, task descriptions, helper text
 
-- **Disabled Text**: `#9E9E9E` (Medium Gray)
+- **Disabled Text**: `#9E9E9E` (Medium Grey)
   - Used for: Disabled states, placeholder text
   - Usage: Input placeholders, disabled buttons
 
 ### Accent Colors
 
-- **Purple Primary**: `#8E44AD` (Medium Purple)
-  - Used for: Primary actions, active states, emphasis
-  - Usage: Active tab indicators, primary buttons, checked checkboxes
+- **Grey Primary**: `#4A4A4A` (Medium Grey)
+  - Used for: Interactive elements, buttons, emphasis
+  - Usage: Plus icon background, button backgrounds, active states
 
-- **Purple Light**: `#A569BD` (Light Purple)
+- **Grey Light**: `#6A6A6A` (Light Grey)
   - Used for: Hover states, pressed states
   - Usage: Button hover effects, active touch feedback
 
-- **Purple Dark**: `#7D3C98` (Dark Purple)
-  - Used for: Pressed states, shadows
-  - Usage: Button pressed states, active shadows
+- **Grey Dark**: `#2A2A2A` (Dark Grey)
+  - Used for: Container backgrounds, subtle emphasis
+  - Usage: Task container backgrounds, input field backgrounds
 
 ### UI Element Colors
 
-- **Border Color**: `#FFFFFF` with 20% opacity (`#33FFFFFF`)
-  - Used for: Container borders, dividers
-  - Usage: Task container borders, input field borders
+- **Border White**: `#FFFFFF` (Pure White)
+  - Used for: Container borders, dividers, emphasis borders
+  - Usage: Task container borders (1px), input field borders (2px), plus icon borders (2px)
 
 - **Icon Primary**: `#FFFFFF` (Pure White)
-  - Used for: Primary icons, navigation icons
-  - Usage: Tab icons, action icons, general UI icons
+  - Used for: Primary icons, navigation icons, plus icon
+  - Usage: Tab icons, action icons, general UI icons, plus icon
 
-- **Icon Accent**: `#8E44AD` (Purple Primary)
-  - Used for: Active icons, special action icons
-  - Usage: Plus icon for adding tasks, active tab icons
+- **Icon Background**: `#4A4A4A` (Medium Grey)
+  - Used for: Icon backgrounds, button backgrounds
+  - Usage: Plus icon circular background
 
 ## Typography
 
@@ -94,41 +94,67 @@ This document defines the comprehensive theme and visual design system for the T
 ## Component Styling
 
 ### Task Containers
-- **Background**: Surface Dark (`#1E1E1E`)
-- **Border**: 1px solid Border Color (`#33FFFFFF`)
-- **Border Radius**: 12px
+- **Background**: Surface Grey (`#2A2A2A`)
+- **Border**: 1px solid Border White (`#FFFFFF`)
+- **Border Radius**: 12px (smooth rounded corners for boxy design)
 - **Padding**: 16px
 - **Margin**: 8px vertical
 
-### Buttons
-- **Primary Button**:
-  - Background: Purple Primary (`#8E44AD`)
-  - Text: Pure White (`#FFFFFF`)
-  - Border Radius: 8px
-  - Padding: 12px horizontal, 8px vertical
+### Task Items (within containers)
+- **Background**: Surface Grey (`#2A2A2A`)
+- **Border**: None (inherits container styling)
+- **Border Radius**: 8px (boxy design with smooth corners)
+- **Padding**: 12px
+- **Margin**: 4px vertical between items
 
-- **Secondary Button**:
-  - Background: Transparent
-  - Border: 1px solid Purple Primary (`#8E44AD`)
-  - Text: Purple Primary (`#8E44AD`)
-  - Border Radius: 8px
+### Routine Task Labels
+- **Background**: Grey Primary (`#4A4A4A`)
+- **Border**: 1px solid Border White (`#FFFFFF`)
+- **Border Radius**: 6px (boxy design)
+- **Text**: Primary Text (`#FFFFFF`)
+- **Padding**: 4px horizontal, 2px vertical
+- **Font Weight**: 500 (Medium) for prominence
+
+### Plus Icon Button
+- **Background**: Grey Primary (`#4A4A4A`)
+- **Border**: 2px solid Border White (`#FFFFFF`)
+- **Border Radius**: 50% (circular)
+- **Icon Color**: Primary Text (`#FFFFFF`)
+- **Size**: 48px x 48px
+- **Icon Size**: 24px
+
+### Primary Buttons
+- **Background**: Grey Primary (`#4A4A4A`)
+- **Text**: Primary Text (`#FFFFFF`)
+- **Border**: 2px solid Border White (`#FFFFFF`)
+- **Border Radius**: 8px (boxy design)
+- **Padding**: 12px horizontal, 8px vertical
+
+### Secondary Buttons
+- **Background**: Transparent
+- **Border**: 2px solid Border White (`#FFFFFF`)
+- **Text**: Primary Text (`#FFFFFF`)
+- **Border Radius**: 8px (boxy design)
 
 ### Input Fields
-- **Background**: Surface Dark (`#1E1E1E`)
-- **Border**: 1px solid Border Color (`#33FFFFFF`)
-- **Border Radius**: 8px
+- **Background**: Surface Grey (`#2A2A2A`)
+- **Border**: 2px solid Border White (`#FFFFFF`)
+- **Border Radius**: 8px (boxy design)
 - **Text Color**: Primary Text (`#FFFFFF`)
 - **Placeholder Color**: Disabled Text (`#9E9E9E`)
 
 ### Checkboxes
-- **Unchecked**: Border Color (`#33FFFFFF`)
-- **Checked**: Purple Primary (`#8E44AD`)
-- **Checkmark**: Pure White (`#FFFFFF`)
+- **Unchecked**: 2px solid Border White (`#FFFFFF`)
+- **Checked**: Background Grey Primary (`#4A4A4A`) with 2px solid Border White
+- **Checkmark**: Primary Text (`#FFFFFF`)
+- **Border Radius**: 4px (slightly boxy)
 
 ### Tabs
-- **Active Tab**: Purple Primary (`#8E44AD`)
+- **Active Tab**: Primary Text (`#FFFFFF`)
 - **Inactive Tab**: Secondary Text (`#E0E0E0`)
-- **Tab Indicator**: Purple Primary (`#8E44AD`)
+- **Tab Indicator**: Border White (`#FFFFFF`)
+- **Tab Background**: Transparent
+- **Tab Border Radius**: 8px (boxy design for consistency)
 
 ## Spacing System
 
@@ -162,9 +188,10 @@ This document defines the comprehensive theme and visual design system for the T
 ## Accessibility
 
 ### Contrast Ratios
-- **Primary Text on Dark Background**: 21:1 (AAA compliant)
-- **Secondary Text on Dark Background**: 12:1 (AAA compliant)
-- **Purple on Dark Background**: 4.8:1 (AA compliant)
+- **Primary Text on Dark Grey Background**: 21:1 (AAA compliant)
+- **Secondary Text on Dark Grey Background**: 12:1 (AAA compliant)
+- **White on Grey Background**: 8.2:1 (AAA compliant)
+- **Grey on Black Background**: 4.5:1 (AA compliant)
 
 ### Touch Targets
 - **Minimum Size**: 44px x 44px

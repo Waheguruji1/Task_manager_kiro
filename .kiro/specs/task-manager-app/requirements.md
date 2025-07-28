@@ -97,18 +97,19 @@ This document outlines the requirements for a personalized task manager Flutter 
 
 ### Requirement 7
 
-**User Story:** As a user, I want the app to have a consistent dark theme with specific color scheme, so that I have a modern and comfortable viewing experience with proper visual hierarchy.
+**User Story:** As a user, I want the app to have a consistent dark theme with a grey/black/white color scheme and boxy design style, so that I have a modern and comfortable viewing experience with proper visual hierarchy.
 
 #### Acceptance Criteria
 
 1. WHEN the app is implemented THEN the system SHALL follow the comprehensive theme specifications defined in #[[file:theme.md]]
-2. WHEN any screen is displayed THEN the system SHALL use the dark background colors as specified in the theme document
-3. WHEN text is rendered THEN the system SHALL use the appropriate text colors (primary white, secondary light gray) as defined in the theme
-4. WHEN interactive elements need emphasis THEN the system SHALL use the purple accent colors as specified in the theme
-5. WHEN UI components are rendered THEN the system SHALL follow the component styling guidelines from the theme document
-6. WHEN the app theme is applied THEN the system SHALL maintain consistent color usage across all screens according to the theme specification
-7. WHEN displaying content THEN the system SHALL ensure sufficient contrast for accessibility compliance as outlined in the theme
-8. WHEN implementing components THEN the system SHALL use the spacing system and typography specifications from the theme document
+2. WHEN any screen is displayed THEN the system SHALL use dark grey as the primary background color
+3. WHEN text is rendered THEN the system SHALL use white and its shades for text colors as defined in the theme
+4. WHEN interactive elements need emphasis THEN the system SHALL use grey shades with white accents as specified in the theme
+5. WHEN UI components are rendered THEN the system SHALL follow the boxy design style with smooth rounded corners
+6. WHEN containers are displayed THEN the system SHALL use grey backgrounds with white borders of specified width
+7. WHEN the app theme is applied THEN the system SHALL maintain consistent color usage across all screens using only black, grey, and white colors
+8. WHEN displaying content THEN the system SHALL ensure sufficient contrast for accessibility compliance as outlined in the theme
+9. WHEN implementing components THEN the system SHALL use the spacing system and typography specifications from the theme document
 
 ### Requirement 8
 

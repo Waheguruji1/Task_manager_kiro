@@ -1,44 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/task_container.dart';
 import '../widgets/add_task_dialog.dart';
-import '../services/preferences_service.dart';
-import '../services/database_service.dart';
+import '../widgets/compact_task_widget.dart';
 import '../models/task.dart';
 import '../utils/theme.dart';
 import '../utils/constants.dart';
 import '../utils/error_handler.dart';
 import '../utils/responsive.dart';
+import '../providers/providers.dart';
 
 /// Home Screen Widget
 /// 
 /// The main task management interface with tabbed organization for
 /// everyday and routine tasks. Features personalized greeting,
 /// custom AppBar with share functionality, and task loading/display logic.
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+class HomeScreen extends ConsumerStatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStateMixin {
   late TabController _tabController;
-  late PreferencesService _preferencesService;
-  late DatabaseService _databaseService;
-  
-  String _userName = '';
-  List<Task> _routineTasks = [];
-  List<Task> _combinedEverydayTasks = []; // Everyday + Routine tasks for display
-  bool _isLoading = true;
-  bool _isInitialized = false;
-  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _initializeServices();
+    _initializeDailyTasks();
   }
 
   @override
@@ -47,65 +39,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  /// Initialize services and load initial data
-  Future<void> _initializeServices() async {
+  /// Initialize daily routine tasks if needed
+  Future<void> _initializeDailyTasks() async {
     try {
-      _preferencesService = await PreferencesService.getInstance();
-      _databaseService = await DatabaseService.getInstance();
-      await _databaseService.initialize();
+      final prefsService = await ref.read(asyncPreferencesServiceProvider.future);
+      final dbService = await ref.read(asyncDatabaseServiceProvider.future);
       
-      setState(() {
-        _isInitialized = true;
-      });
-      
-      await _loadUserData();
-      await _checkAndResetDailyTasks();
-      await _loadTasks();
-    } catch (e) {
-      ErrorHandler.logError(e, context: 'Home screen initialization', type: ErrorType.database);
-      setState(() {
-        _errorMessage = e is AppException ? e.message : AppStrings.errorDatabaseConnection;
-        _isLoading = false;
-        _isInitialized = true;
-      });
-    }
-  }
-
-  /// Load user data from SharedPreferences
-  Future<void> _loadUserData() async {
-    try {
-      final userName = await _preferencesService.getUserName();
-      setState(() {
-        _userName = userName ?? '';
-      });
-    } catch (e) {
-      ErrorHandler.logError(e, context: 'Load user data', type: ErrorType.preferences);
-      setState(() {
-        _userName = '';
-      });
-    }
-  }
-
-  /// Check if it's a new day and reset routine tasks if needed
-  Future<void> _checkAndResetDailyTasks() async {
-    try {
       final today = DateTime.now();
       final todayString = '${today.year}-${today.month}-${today.day}';
       
       // Get the last reset date from SharedPreferences
-      final lastResetDate = await _preferencesService.getLastResetDate();
+      final lastResetDate = await prefsService.getLastResetDate();
       
-      // If it's a new day, reset routine tasks
+      // If it's a new day, create daily routine task instances
       if (lastResetDate != todayString) {
-        ErrorHandler.logError('New day detected. Resetting routine tasks...', context: 'Daily reset', type: ErrorType.unknown);
+        ErrorHandler.logError('New day detected. Creating daily routine task instances...', context: 'Daily reset', type: ErrorType.unknown);
         
-        final success = await _databaseService.resetDailyRoutineTasks();
+        final success = await dbService.createDailyRoutineTaskInstances();
         if (success) {
           // Save today's date as the last reset date
-          await _preferencesService.setLastResetDate(todayString);
-          ErrorHandler.logError('Routine tasks reset successfully for $todayString', context: 'Daily reset', type: ErrorType.unknown);
+          await prefsService.setLastResetDate(todayString);
+          ErrorHandler.logError('Daily routine task instances created successfully for $todayString', context: 'Daily reset', type: ErrorType.unknown);
         } else {
-          ErrorHandler.logError('Failed to reset routine tasks', context: 'Daily reset', type: ErrorType.database);
+          ErrorHandler.logError('Failed to create daily routine task instances', context: 'Daily reset', type: ErrorType.database);
         }
       }
     } catch (e) {
@@ -114,46 +70,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  /// Load tasks from database
-  Future<void> _loadTasks() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      // Load everyday tasks (non-routine)
-      final everydayTasks = await _databaseService.getEverydayTasks();
-      
-      // Load routine tasks
-      final routineTasks = await _databaseService.getRoutineTasks();
-      
-      // Combine everyday tasks with routine tasks for display in everyday tab
-      final combinedTasks = [...everydayTasks, ...routineTasks];
-      
-      setState(() {
-        _routineTasks = routineTasks;
-        _combinedEverydayTasks = combinedTasks;
-        _isLoading = false;
-      });
-    } catch (e) {
-      ErrorHandler.logError(e, context: 'Load tasks', type: ErrorType.database);
-      setState(() {
-        _errorMessage = e is AppException ? e.message : AppStrings.errorLoadingTasks;
-        _isLoading = false;
-      });
-    }
-  }
-
   /// Handle task completion toggle
   Future<void> _onTaskToggle(Task task) async {
     if (task.id == null) return;
     
     try {
-      final success = await _databaseService.toggleTaskCompletion(task.id!);
+      final taskStateNotifier = await ref.read(asyncTaskStateNotifierProvider.future);
+      final success = await taskStateNotifier.toggleTaskCompletion(task.id!);
+      
       if (success) {
-        await _loadTasks(); // Reload tasks to reflect changes
-        
         // Show success message for completed tasks
         if (!task.isCompleted && mounted) {
           ErrorHandler.showSuccessSnackBar(context, AppStrings.taskCompletedSuccess);
@@ -181,8 +106,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       context,
       task: task,
       onTaskSaved: () {
-        // Reload tasks after saving
-        _loadTasks();
+        // Reload tasks after saving using Riverpod
+        ref.invalidate(everydayTasksProvider);
+        ref.invalidate(routineTasksProvider);
       },
     );
     
@@ -200,16 +126,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (!confirmed) return;
     
     try {
-      final success = await _databaseService.deleteTask(task.id!);
-      if (success) {
-        await _loadTasks(); // Reload tasks to reflect changes
-        if (mounted) {
-          ErrorHandler.showSuccessSnackBar(context, AppStrings.taskDeletedSuccess);
-        }
+      final taskStateNotifier = await ref.read(asyncTaskStateNotifierProvider.future);
+      bool success;
+      
+      // Check if we're in the routine tasks tab and this is a routine task template
+      if (_tabController.index == 1 && task.isRoutine && task.routineTaskId == null) {
+        // This is a routine task template being deleted from routine tab
+        // Delete the routine task and all its instances
+        success = await taskStateNotifier.deleteRoutineTaskAndInstances(task.id!);
       } else {
-        if (mounted) {
-          ErrorHandler.showErrorSnackBar(context, AppStrings.errorDeletingTask);
-        }
+        // This is either a regular everyday task or a routine task instance
+        // Just delete this specific task
+        success = await taskStateNotifier.deleteTask(task.id!);
+      }
+      
+      if (success && mounted) {
+        ErrorHandler.showSuccessSnackBar(context, AppStrings.taskDeletedSuccess);
+      } else if (mounted) {
+        ErrorHandler.showErrorSnackBar(context, AppStrings.errorDeletingTask);
       }
     } catch (e) {
       ErrorHandler.logError(e, context: 'Delete task', type: ErrorType.database);
@@ -232,8 +166,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       context,
       isRoutineTask: isRoutineTask,
       onTaskSaved: () {
-        // Reload tasks after saving
-        _loadTasks();
+        // Reload tasks after saving using Riverpod
+        ref.invalidate(everydayTasksProvider);
+        ref.invalidate(routineTasksProvider);
       },
     );
     
@@ -270,6 +205,54 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
 
 
+  /// Build compact task widgets
+  Widget _buildCompactTaskWidgets() {
+    return Column(
+      children: [
+        // Everyday Tasks Compact Widget
+        CompactTaskWidget(
+          title: 'Today\'s Tasks',
+          showRoutineTasks: false,
+          maxTasksWhenCollapsed: 4,
+          onTaskToggle: _onTaskToggle,
+          onTaskEdit: _onTaskEdit,
+          onTaskDelete: _onTaskDelete,
+          onAddTask: () => _onAddTaskForWidget(false),
+        ),
+        
+        const SizedBox(height: AppTheme.spacingM),
+        
+        // Routine Tasks Compact Widget
+        CompactTaskWidget(
+          title: 'Routine Tasks',
+          showRoutineTasks: true,
+          maxTasksWhenCollapsed: 3,
+          onTaskToggle: _onTaskToggle,
+          onTaskEdit: _onTaskEdit,
+          onTaskDelete: _onTaskDelete,
+          onAddTask: () => _onAddTaskForWidget(true),
+        ),
+      ],
+    );
+  }
+
+  /// Handle add task for compact widgets
+  Future<void> _onAddTaskForWidget(bool isRoutineTask) async {
+    final result = await showAddTaskDialog(
+      context,
+      isRoutineTask: isRoutineTask,
+      onTaskSaved: () {
+        // Reload tasks after saving using Riverpod
+        ref.invalidate(everydayTasksProvider);
+        ref.invalidate(routineTasksProvider);
+      },
+    );
+    
+    if (result == true && mounted) {
+      ErrorHandler.showSuccessSnackBar(context, AppStrings.taskSavedSuccess);
+    }
+  }
+
   /// Build personalized greeting message
   Widget _buildGreeting() {
     final hour = DateTime.now().hour;
@@ -283,7 +266,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       greeting = AppStrings.greetingEvening;
     }
     
-    final displayName = _userName.isNotEmpty ? _userName : 'there';
+    // Watch user name from Riverpod provider
+    final userNameAsync = ref.watch(userNameProvider);
     final responsivePadding = ResponsiveUtils.getScreenPadding(context);
     final fontMultiplier = ResponsiveUtils.getFontSizeMultiplier(context);
     
@@ -297,12 +281,33 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '$greeting, $displayName!',
-            style: AppTheme.headingLarge.copyWith(
-              fontSize: 28 * fontMultiplier,
-              fontWeight: FontWeight.w600,
-              height: 1.2,
+          userNameAsync.when(
+            data: (userName) {
+              final displayName = (userName?.isNotEmpty ?? false) ? userName! : 'there';
+              return Text(
+                '$greeting, $displayName!',
+                style: AppTheme.headingLarge.copyWith(
+                  fontSize: 28 * fontMultiplier,
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
+                ),
+              );
+            },
+            loading: () => Text(
+              '$greeting, there!',
+              style: AppTheme.headingLarge.copyWith(
+                fontSize: 28 * fontMultiplier,
+                fontWeight: FontWeight.w600,
+                height: 1.2,
+              ),
+            ),
+            error: (_, __) => Text(
+              '$greeting, there!',
+              style: AppTheme.headingLarge.copyWith(
+                fontSize: 28 * fontMultiplier,
+                fontWeight: FontWeight.w600,
+                height: 1.2,
+              ),
             ),
           ),
           const SizedBox(height: AppTheme.spacingS),
@@ -335,9 +340,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           AppTheme.spacingS,
         ),
         decoration: BoxDecoration(
-          color: AppTheme.surfaceDark,
+          color: AppTheme.surfaceGrey,
           borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
-          border: Border.all(color: AppTheme.borderColor),
+          border: Border.all(color: AppTheme.borderWhite),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -359,16 +364,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ],
           indicator: BoxDecoration(
-            color: AppTheme.purplePrimary.withValues(alpha: 0.15),
+            color: AppTheme.greyPrimary.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius - 1),
             border: Border.all(
-              color: AppTheme.purplePrimary.withValues(alpha: 0.3),
+              color: AppTheme.borderWhite,
               width: 1,
             ),
           ),
           indicatorSize: TabBarIndicatorSize.tab,
           dividerColor: Colors.transparent,
-          labelColor: AppTheme.purplePrimary,
+          labelColor: AppTheme.primaryText,
           unselectedLabelColor: AppTheme.secondaryText,
           labelStyle: AppTheme.bodyLarge.copyWith(
             fontWeight: FontWeight.w600,
@@ -379,7 +384,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             fontSize: 16 * fontMultiplier,
           ),
           overlayColor: WidgetStateProperty.all(
-            AppTheme.purplePrimary.withValues(alpha: 0.1),
+            AppTheme.greyPrimary.withValues(alpha: 0.1),
           ),
         ),
       ),
@@ -388,27 +393,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   /// Build task content for tabs
   Widget _buildTaskContent() {
-    if (_isLoading) {
-      return const LoadingWidget(
-        message: AppStrings.loadingTasks,
-      );
-    }
-
-    if (_errorMessage != null) {
-      return ErrorDisplayWidget(
-        message: _errorMessage!,
-        onRetry: _loadTasks,
-      );
-    }
+    // Watch everyday and routine tasks from Riverpod providers
+    final everydayTasksAsync = ref.watch(everydayTasksProvider);
+    final routineTasksAsync = ref.watch(routineTasksProvider);
 
     return TabBarView(
       controller: _tabController,
       children: [
         // Everyday Tasks Tab (includes routine tasks)
-        _buildTaskList(_combinedEverydayTasks, AppStrings.noEverydayTasksMessage),
+        everydayTasksAsync.when(
+          data: (tasks) => _buildTaskList(tasks, AppStrings.noEverydayTasksMessage),
+          loading: () => const LoadingWidget(message: AppStrings.loadingTasks),
+          error: (error, _) => ErrorDisplayWidget(
+            message: error.toString(),
+            onRetry: () => ref.invalidate(everydayTasksProvider),
+          ),
+        ),
         
         // Routine Tasks Tab
-        _buildTaskList(_routineTasks, AppStrings.noRoutineTasksMessage),
+        routineTasksAsync.when(
+          data: (tasks) => _buildTaskList(tasks, AppStrings.noRoutineTasksMessage),
+          loading: () => const LoadingWidget(message: AppStrings.loadingTasks),
+          error: (error, _) => ErrorDisplayWidget(
+            message: error.toString(),
+            onRetry: () => ref.invalidate(routineTasksProvider),
+          ),
+        ),
       ],
     );
   }
@@ -451,40 +461,127 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    // Show loading screen while initializing
-    if (!_isInitialized) {
-      return const Scaffold(
+    // Watch async providers to ensure services are initialized
+    final databaseServiceAsync = ref.watch(asyncDatabaseServiceProvider);
+    final preferencesServiceAsync = ref.watch(asyncPreferencesServiceProvider);
+
+    return databaseServiceAsync.when(
+      data: (dbService) => preferencesServiceAsync.when(
+        data: (prefsService) => Scaffold(
+          backgroundColor: AppTheme.backgroundDark,
+          appBar: const CustomAppBar(
+            title: AppConstants.appName,
+            showShareButton: true,
+          ),
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Personalized greeting
+              _buildGreeting(),
+              
+              // Compact task widgets
+              _buildCompactTaskWidgets(),
+              
+              // Tab bar
+              _buildTabBar(),
+              
+              const SizedBox(height: AppTheme.spacingM),
+              
+              // Task content
+              Expanded(
+                child: _buildTaskContent(),
+              ),
+            ],
+          ),
+        ),
+        loading: () => const Scaffold(
+          backgroundColor: AppTheme.backgroundDark,
+          body: Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.greyPrimary),
+            ),
+          ),
+        ),
+        error: (error, stackTrace) => Scaffold(
+          backgroundColor: AppTheme.backgroundDark,
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: Colors.red.shade400,
+                ),
+                const SizedBox(height: AppTheme.spacingM),
+                Text(
+                  'Failed to initialize preferences service',
+                  style: AppTheme.bodyLarge.copyWith(
+                    color: AppTheme.secondaryText,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppTheme.spacingL),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    ref.invalidate(asyncPreferencesServiceProvider);
+                    ref.invalidate(asyncDatabaseServiceProvider);
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.greyPrimary,
+                    foregroundColor: AppTheme.primaryText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      loading: () => const Scaffold(
         backgroundColor: AppTheme.backgroundDark,
         body: Center(
           child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.purplePrimary),
+            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.greyPrimary),
           ),
         ),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundDark,
-      appBar: const CustomAppBar(
-        title: AppConstants.appName,
-        showShareButton: true,
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Personalized greeting
-          _buildGreeting(),
-          
-          // Tab bar
-          _buildTabBar(),
-          
-          const SizedBox(height: AppTheme.spacingM),
-          
-          // Task content
-          Expanded(
-            child: _buildTaskContent(),
+      error: (error, stackTrace) => Scaffold(
+        backgroundColor: AppTheme.backgroundDark,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 48,
+                color: Colors.red.shade400,
+              ),
+              const SizedBox(height: AppTheme.spacingM),
+              Text(
+                'Failed to initialize database service',
+                style: AppTheme.bodyLarge.copyWith(
+                  color: AppTheme.secondaryText,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppTheme.spacingL),
+              ElevatedButton.icon(
+                onPressed: () {
+                  ref.invalidate(asyncDatabaseServiceProvider);
+                  ref.invalidate(asyncPreferencesServiceProvider);
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.greyPrimary,
+                  foregroundColor: AppTheme.primaryText,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
