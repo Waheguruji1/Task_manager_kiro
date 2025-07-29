@@ -213,6 +213,103 @@ class TaskItem extends StatelessWidget {
 }
 ```
 
+### 6. Stats Screen (`stats_screen.dart`)
+
+**Purpose**: Display productivity insights, heatmaps, and achievements
+
+**Key Features**:
+- Task completion activity heatmap (purple color scheme)
+- Task creation vs completion heatmap (green color scheme)
+- Achievement system with progress tracking
+- Interactive tooltips for heatmap data
+- Responsive grid layouts
+
+**Interface**:
+```dart
+class StatsScreen extends ConsumerWidget {
+  const StatsScreen({Key? key}) : super(key: key);
+  
+  @override
+  Widget build(BuildContext context, WidgetRef ref) { /* Implementation */ }
+  
+  Widget _buildCompletionHeatmap(List<Task> tasks) { /* Implementation */ }
+  Widget _buildCreationVsCompletionHeatmap(List<Task> tasks) { /* Implementation */ }
+  Widget _buildAchievementsSection(List<Achievement> achievements) { /* Implementation */ }
+  Map<DateTime, int> _calculateDailyCompletions(List<Task> tasks) { /* Implementation */ }
+  Map<DateTime, Map<String, int>> _calculateDailyCreationCompletion(List<Task> tasks) { /* Implementation */ }
+}
+```
+
+### 7. Heatmap Widget (`heatmap_widget.dart`)
+
+**Purpose**: Reusable calendar-style heatmap component
+
+**Key Features**:
+- Configurable color schemes (purple/green)
+- Interactive tooltips
+- Monthly organization with year view
+- Responsive cell sizing
+- Data intensity visualization
+
+**Interface**:
+```dart
+class HeatmapWidget extends StatelessWidget {
+  final Map<DateTime, dynamic> data;
+  final Color baseColor;
+  final String title;
+  final Function(DateTime, dynamic) onCellTap;
+  final Widget Function(DateTime, dynamic) tooltipBuilder;
+  
+  const HeatmapWidget({
+    Key? key,
+    required this.data,
+    required this.baseColor,
+    required this.title,
+    required this.onCellTap,
+    required this.tooltipBuilder,
+  }) : super(key: key);
+  
+  @override
+  Widget build(BuildContext context) { /* Implementation */ }
+  
+  Color _getIntensityColor(dynamic value) { /* Implementation */ }
+  Widget _buildMonthGrid(DateTime month) { /* Implementation */ }
+  Widget _buildDayCell(DateTime date, dynamic value) { /* Implementation */ }
+}
+```
+
+### 8. Achievement Widget (`achievement_widget.dart`)
+
+**Purpose**: Display individual achievements with progress
+
+**Key Features**:
+- Achievement icon and title
+- Progress indicators for unearned achievements
+- Visual distinction between earned and unearned
+- Achievement descriptions and unlock criteria
+
+**Interface**:
+```dart
+class AchievementWidget extends StatelessWidget {
+  final Achievement achievement;
+  final bool isEarned;
+  final double progress;
+  
+  const AchievementWidget({
+    Key? key,
+    required this.achievement,
+    required this.isEarned,
+    this.progress = 0.0,
+  }) : super(key: key);
+  
+  @override
+  Widget build(BuildContext context) { /* Implementation */ }
+  
+  Widget _buildEarnedBadge() { /* Implementation */ }
+  Widget _buildProgressIndicator() { /* Implementation */ }
+}
+```
+
 ## Data Models
 
 ### Task Model
@@ -269,6 +366,61 @@ class User {
 }
 ```
 
+### Achievement Model
+
+```dart
+class Achievement {
+  final String id;
+  final String title;
+  final String description;
+  final IconData icon;
+  final AchievementType type;
+  final int targetValue;
+  final bool isEarned;
+  final DateTime? earnedAt;
+  final int currentProgress;
+  
+  Achievement({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.type,
+    required this.targetValue,
+    this.isEarned = false,
+    this.earnedAt,
+    this.currentProgress = 0,
+  });
+  
+  double get progressPercentage => 
+    targetValue > 0 ? (currentProgress / targetValue).clamp(0.0, 1.0) : 0.0;
+  
+  Achievement copyWith({
+    String? id,
+    String? title,
+    String? description,
+    IconData? icon,
+    AchievementType? type,
+    int? targetValue,
+    bool? isEarned,
+    DateTime? earnedAt,
+    int? currentProgress,
+  }) { /* Implementation */ }
+  
+  Map<String, dynamic> toJson() { /* Implementation */ }
+  factory Achievement.fromJson(Map<String, dynamic> json) { /* Implementation */ }
+}
+
+enum AchievementType {
+  streak,
+  dailyCompletion,
+  weeklyCompletion,
+  monthlyCompletion,
+  routineConsistency,
+  firstTime,
+}
+```
+
 ### Database Schema (Drift)
 
 ```dart
@@ -283,12 +435,42 @@ class Tasks extends Table {
   DateTimeColumn get completedAt => dateTime().nullable()();
 }
 
-@DriftDatabase(tables: [Tasks])
+@DataClassName('AchievementData')
+class Achievements extends Table {
+  TextColumn get id => text()();
+  TextColumn get title => text().withLength(min: 1, max: 255)();
+  TextColumn get description => text()();
+  IntColumn get iconCodePoint => integer()();
+  IntColumn get type => intEnum<AchievementType>()();
+  IntColumn get targetValue => integer()();
+  BoolColumn get isEarned => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get earnedAt => dateTime().nullable()();
+  IntColumn get currentProgress => integer().withDefault(const Constant(0))();
+  
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [Tasks, Achievements])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
   
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+  
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (Migrator m) async {
+      await m.createAll();
+      await _initializeDefaultAchievements();
+    },
+    onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 2) {
+        await m.createTable(achievements);
+        await _initializeDefaultAchievements();
+      }
+    },
+  );
   
   // Task operations
   Future<List<TaskData>> getAllTasks() => select(tasks).get();
@@ -297,6 +479,67 @@ class AppDatabase extends _$AppDatabase {
   Future<int> insertTask(TasksCompanion task) => into(tasks).insert(task);
   Future<bool> updateTask(TasksCompanion task) => update(tasks).replace(task);
   Future<int> deleteTask(int id) => (delete(tasks)..where((t) => t.id.equals(id))).go();
+  
+  // Achievement operations
+  Future<List<AchievementData>> getAllAchievements() => select(achievements).get();
+  Future<List<AchievementData>> getEarnedAchievements() => 
+    (select(achievements)..where((a) => a.isEarned.equals(true))).get();
+  Future<int> insertAchievement(AchievementsCompanion achievement) => 
+    into(achievements).insert(achievement);
+  Future<bool> updateAchievement(AchievementsCompanion achievement) => 
+    update(achievements).replace(achievement);
+  Future<AchievementData?> getAchievementById(String id) => 
+    (select(achievements)..where((a) => a.id.equals(id))).getSingleOrNull();
+  
+  // Initialize default achievements
+  Future<void> _initializeDefaultAchievements() async {
+    final defaultAchievements = [
+      AchievementsCompanion.insert(
+        id: 'first_task',
+        title: 'First Task',
+        description: 'Complete your first task',
+        iconCodePoint: Icons.star.codePoint,
+        type: AchievementType.firstTime,
+        targetValue: 1,
+      ),
+      AchievementsCompanion.insert(
+        id: 'week_warrior',
+        title: 'Week Warrior',
+        description: 'Complete tasks for 7 consecutive days',
+        iconCodePoint: Icons.local_fire_department.codePoint,
+        type: AchievementType.streak,
+        targetValue: 7,
+      ),
+      AchievementsCompanion.insert(
+        id: 'month_master',
+        title: 'Month Master',
+        description: 'Complete tasks for 30 consecutive days',
+        iconCodePoint: Icons.emoji_events.codePoint,
+        type: AchievementType.streak,
+        targetValue: 30,
+      ),
+      AchievementsCompanion.insert(
+        id: 'routine_champion',
+        title: 'Routine Champion',
+        description: 'Complete all routine tasks for 7 consecutive days',
+        iconCodePoint: Icons.repeat.codePoint,
+        type: AchievementType.routineConsistency,
+        targetValue: 7,
+      ),
+      AchievementsCompanion.insert(
+        id: 'task_tornado',
+        title: 'Task Tornado',
+        description: 'Complete 20 tasks in a single day',
+        iconCodePoint: Icons.flash_on.codePoint,
+        type: AchievementType.dailyCompletion,
+        targetValue: 20,
+      ),
+    ];
+    
+    for (final achievement in defaultAchievements) {
+      await into(achievements).insertOnConflictUpdate(achievement);
+    }
+  }
 }
 ```
 
@@ -366,6 +609,67 @@ class ShareService {
   }
 }
 ```
+
+### Achievement Service (`achievement_service.dart`)
+
+**Purpose**: Achievement tracking and progress calculation
+
+**Key Methods**:
+```dart
+class AchievementService {
+  static final AchievementService _instance = AchievementService._internal();
+  factory AchievementService() => _instance;
+  AchievementService._internal();
+  
+  late AppDatabase _database;
+  
+  Future<void> initialize(AppDatabase database) async { /* Initialize service */ }
+  
+  // Achievement operations
+  Future<List<Achievement>> getAllAchievements() async { /* Implementation */ }
+  Future<List<Achievement>> getEarnedAchievements() async { /* Implementation */ }
+  Future<void> checkAndUpdateAchievements(List<Task> tasks) async { /* Implementation */ }
+  Future<void> unlockAchievement(String achievementId) async { /* Implementation */ }
+  
+  // Progress calculation methods
+  Future<int> calculateCurrentStreak(List<Task> tasks) async { /* Implementation */ }
+  Future<int> calculateRoutineStreak(List<Task> tasks) async { /* Implementation */ }
+  Future<int> getDailyCompletionCount(DateTime date, List<Task> tasks) async { /* Implementation */ }
+  Future<bool> checkFirstTaskCompletion(List<Task> tasks) async { /* Implementation */ }
+  
+  // Achievement checking methods
+  Future<void> _checkStreakAchievements(int currentStreak) async { /* Implementation */ }
+  Future<void> _checkDailyCompletionAchievements(int dailyCount) async { /* Implementation */ }
+  Future<void> _checkRoutineConsistencyAchievements(int routineStreak) async { /* Implementation */ }
+  Future<void> _checkFirstTimeAchievements(List<Task> tasks) async { /* Implementation */ }
+}
+```
+
+### Stats Service (`stats_service.dart`)
+
+**Purpose**: Statistics calculation and heatmap data generation
+
+**Key Methods**:
+```dart
+class StatsService {
+  static final StatsService _instance = StatsService._internal();
+  factory StatsService() => _instance;
+  StatsService._internal();
+  
+  // Heatmap data calculation
+  Map<DateTime, int> calculateCompletionHeatmapData(List<Task> tasks) { /* Implementation */ }
+  Map<DateTime, Map<String, int>> calculateCreationCompletionHeatmapData(List<Task> tasks) { /* Implementation */ }
+  
+  // Statistics calculation
+  Map<String, dynamic> calculateOverallStats(List<Task> tasks) { /* Implementation */ }
+  Map<String, int> calculateMonthlyStats(List<Task> tasks, DateTime month) { /* Implementation */ }
+  Map<String, int> calculateWeeklyStats(List<Task> tasks, DateTime week) { /* Implementation */ }
+  
+  // Helper methods
+  DateTime _normalizeDate(DateTime date) { /* Implementation */ }
+  List<DateTime> _getDateRange(DateTime start, DateTime end) { /* Implementation */ }
+  Color _getHeatmapIntensityColor(int value, int maxValue, Color baseColor) { /* Implementation */ }
+}
 
 ## Error Handling
 

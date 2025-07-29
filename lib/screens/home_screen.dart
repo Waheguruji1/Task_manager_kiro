@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/custom_app_bar.dart';
-import '../widgets/task_container.dart';
 import '../widgets/add_task_dialog.dart';
 import '../widgets/compact_task_widget.dart';
 import '../models/task.dart';
@@ -23,20 +22,12 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStateMixin {
-  late TabController _tabController;
+class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _initializeDailyTasks();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   /// Initialize daily routine tasks if needed
@@ -129,10 +120,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
       final taskStateNotifier = await ref.read(asyncTaskStateNotifierProvider.future);
       bool success;
       
-      // Check if we're in the routine tasks tab and this is a routine task template
-      if (_tabController.index == 1 && task.isRoutine && task.routineTaskId == null) {
-        // This is a routine task template being deleted from routine tab
-        // Delete the routine task and all its instances
+      // Check if this is a routine task template
+      if (task.isRoutine && task.routineTaskId == null) {
+        // This is a routine task template - delete the routine task and all its instances
         success = await taskStateNotifier.deleteRoutineTaskAndInstances(task.id!);
       } else {
         // This is either a regular everyday task or a routine task instance
@@ -157,25 +147,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
     }
   }
 
-  /// Handle add task
-  Future<void> _onAddTask() async {
-    // Determine if we're adding a routine task based on current tab
-    final isRoutineTask = _tabController.index == 1;
-    
-    final result = await showAddTaskDialog(
-      context,
-      isRoutineTask: isRoutineTask,
-      onTaskSaved: () {
-        // Reload tasks after saving using Riverpod
-        ref.invalidate(everydayTasksProvider);
-        ref.invalidate(routineTasksProvider);
-      },
-    );
-    
-    if (result == true) {
-      ErrorHandler.showSuccessSnackBar(context, AppStrings.taskSavedSuccess);
-    }
-  }
+
 
   /// Show delete confirmation dialog
   Future<bool> _showDeleteConfirmationDialog(String taskTitle) async {
@@ -324,140 +296,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
     );
   }
 
-  /// Build tab structure with labels
-  Widget _buildTabBar() {
-    final responsivePadding = ResponsiveUtils.getScreenPadding(context);
-    final contentWidth = ResponsiveUtils.getContentWidth(context);
-    final fontMultiplier = ResponsiveUtils.getFontSizeMultiplier(context);
-    
-    return Center(
-      child: Container(
-        width: contentWidth,
-        margin: EdgeInsets.fromLTRB(
-          responsivePadding.horizontal / 2,
-          AppTheme.spacingS,
-          responsivePadding.horizontal / 2,
-          AppTheme.spacingS,
-        ),
-        decoration: BoxDecoration(
-          color: AppTheme.surfaceGrey,
-          borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
-          border: Border.all(color: AppTheme.borderWhite),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              offset: const Offset(0, 1),
-              blurRadius: 2,
-            ),
-          ],
-        ),
-        child: TabBar(
-          controller: _tabController,
-          tabs: [
-            Tab(
-              text: AppStrings.everydayTasksTab,
-              height: ResponsiveUtils.isSmallScreen(context) ? 44 : 48,
-            ),
-            Tab(
-              text: AppStrings.routineTasksTab,
-              height: ResponsiveUtils.isSmallScreen(context) ? 44 : 48,
-            ),
-          ],
-          indicator: BoxDecoration(
-            color: AppTheme.greyPrimary.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius - 1),
-            border: Border.all(
-              color: AppTheme.borderWhite,
-              width: 1,
-            ),
-          ),
-          indicatorSize: TabBarIndicatorSize.tab,
-          dividerColor: Colors.transparent,
-          labelColor: AppTheme.primaryText,
-          unselectedLabelColor: AppTheme.secondaryText,
-          labelStyle: AppTheme.bodyLarge.copyWith(
-            fontWeight: FontWeight.w600,
-            fontSize: 16 * fontMultiplier,
-          ),
-          unselectedLabelStyle: AppTheme.bodyLarge.copyWith(
-            fontWeight: FontWeight.w400,
-            fontSize: 16 * fontMultiplier,
-          ),
-          overlayColor: WidgetStateProperty.all(
-            AppTheme.greyPrimary.withValues(alpha: 0.1),
-          ),
-        ),
-      ),
-    );
-  }
 
-  /// Build task content for tabs
-  Widget _buildTaskContent() {
-    // Watch everyday and routine tasks from Riverpod providers
-    final everydayTasksAsync = ref.watch(everydayTasksProvider);
-    final routineTasksAsync = ref.watch(routineTasksProvider);
-
-    return TabBarView(
-      controller: _tabController,
-      children: [
-        // Everyday Tasks Tab (includes routine tasks)
-        everydayTasksAsync.when(
-          data: (tasks) => _buildTaskList(tasks, AppStrings.noEverydayTasksMessage),
-          loading: () => const LoadingWidget(message: AppStrings.loadingTasks),
-          error: (error, _) => ErrorDisplayWidget(
-            message: error.toString(),
-            onRetry: () => ref.invalidate(everydayTasksProvider),
-          ),
-        ),
-        
-        // Routine Tasks Tab
-        routineTasksAsync.when(
-          data: (tasks) => _buildTaskList(tasks, AppStrings.noRoutineTasksMessage),
-          loading: () => const LoadingWidget(message: AppStrings.loadingTasks),
-          error: (error, _) => ErrorDisplayWidget(
-            message: error.toString(),
-            onRetry: () => ref.invalidate(routineTasksProvider),
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Build task list for a tab
-  Widget _buildTaskList(List<Task> tasks, String emptyMessage) {
-    if (tasks.isEmpty) {
-      return EmptyStateWidget(
-        title: AppStrings.emptyStateTitle,
-        subtitle: emptyMessage,
-        actionText: AppStrings.emptyStateAction,
-        onAction: _onAddTask,
-      );
-    }
-
-    return ListView.builder(
-      itemCount: 3, // Top spacing, TaskContainer, Bottom spacing
-      itemBuilder: (context, index) {
-        switch (index) {
-          case 0:
-            return const SizedBox(height: AppTheme.spacingM);
-          case 1:
-            return TaskContainer(
-              key: ValueKey('task_container_${tasks.length}'), // Key for performance
-              date: DateTime.now(),
-              tasks: tasks,
-              onAddTask: _onAddTask,
-              onTaskToggle: _onTaskToggle,
-              onTaskEdit: _onTaskEdit,
-              onTaskDelete: _onTaskDelete,
-            );
-          case 2:
-            return const SizedBox(height: AppTheme.spacingXL);
-          default:
-            return const SizedBox.shrink();
-        }
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -473,25 +312,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
             title: AppConstants.appName,
             showShareButton: true,
           ),
-          body: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Personalized greeting
-              _buildGreeting(),
-              
-              // Compact task widgets
-              _buildCompactTaskWidgets(),
-              
-              // Tab bar
-              _buildTabBar(),
-              
-              const SizedBox(height: AppTheme.spacingM),
-              
-              // Task content
-              Expanded(
-                child: _buildTaskContent(),
-              ),
-            ],
+          body: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Personalized greeting
+                _buildGreeting(),
+                
+                // Compact task widgets
+                _buildCompactTaskWidgets(),
+                
+                const SizedBox(height: AppTheme.spacingXL),
+              ],
+            ),
           ),
         ),
         loading: () => const Scaffold(

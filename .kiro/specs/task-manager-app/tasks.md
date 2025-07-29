@@ -110,7 +110,7 @@
   - Add app icon and ensure proper asset integration
   - _Requirements: 5, 7, 8_
 
-- [ ] 16. Integrate Riverpod state management
+- [x] 16. Integrate Riverpod state management
   - Add flutter_riverpod dependency to pubspec.yaml
   - Wrap main app with ProviderScope for Riverpod initialization
   - Create providers for database service, preferences service, and share service
@@ -122,3 +122,86 @@
   - Add provider observers for debugging and logging
   - Update all screens and widgets to use Riverpod providers instead of direct service calls
   - _Requirements: 9, 10_
+
+- [x] 17. Implement Achievement model and database schema
+  - Create models/achievement.dart with Achievement class and AchievementType enum
+  - Add JSON serialization methods and copyWith functionality to Achievement model
+  - Update models/database.dart to include Achievements table with proper schema
+  - Implement database migration strategy to add achievements table to existing databases
+  - Add achievement CRUD operations to database service methods
+  - Create default achievements initialization in database setup
+  - _Requirements: 12_
+
+- [ ] 18. Create Achievement Service for progress tracking
+  - Create services/achievement_service.dart with singleton pattern
+  - Implement achievement progress calculation methods for streaks and daily counts
+  - Add methods to check and unlock achievements based on task completion patterns
+  - Create streak calculation logic for consecutive days and routine consistency
+  - Implement daily completion counting and milestone checking
+  - Add achievement update methods with proper database persistence
+  - _Requirements: 12_
+
+- [ ] 19. Create Stats Service for heatmap data calculation
+  - Create services/stats_service.dart with heatmap data generation methods
+  - Implement completion heatmap data calculation with daily task completion counts
+  - Create creation vs completion heatmap data with both metrics per day
+  - Add date normalization and range calculation helper methods
+  - Implement color intensity calculation for heatmap visualization
+  - Create monthly and weekly statistics calculation methods
+  - _Requirements: 11_
+
+- [ ] 20. Build reusable Heatmap Widget component
+  - Create widgets/heatmap_widget.dart with configurable color schemes
+  - Implement calendar-style grid layout with monthly organization
+  - Add interactive tooltip functionality for displaying daily data
+  - Create color intensity calculation based on data values
+  - Implement responsive cell sizing and proper spacing
+  - Add support for both single value and multi-value data display
+  - _Requirements: 11_
+
+- [ ] 21. Create Achievement Widget for displaying achievements
+  - Create widgets/achievement_widget.dart for individual achievement display
+  - Implement earned achievement badge with icon and title
+  - Add progress indicator for unearned achievements with percentage display
+  - Create visual distinction between earned and unearned achievements
+  - Implement achievement description and unlock criteria display
+  - Add proper theme integration with consistent styling
+  - _Requirements: 12_
+
+- [ ] 22. Enhance Stats Screen with heatmaps and achievements
+  - Update lib/screens/stats_screen.dart to include heatmap sections
+  - Implement task completion activity heatmap with purple color scheme
+  - Add task creation vs completion heatmap with green color scheme
+  - Create achievements section below heatmaps with proper layout
+  - Integrate achievement service to display earned and progress achievements
+  - Add proper loading states and error handling for heatmap data
+  - Implement responsive layout for different screen sizes
+  - _Requirements: 11, 12_
+
+- [ ] 23. Integrate achievement tracking with task operations
+  - Update task completion logic to trigger achievement checking
+  - Add achievement service calls when tasks are created, completed, or updated
+  - Implement real-time achievement unlocking with proper notifications
+  - Create achievement progress updates when task patterns change
+  - Add achievement checking for routine task consistency
+  - Implement streak calculation updates on daily task completion
+  - _Requirements: 12_
+
+- [ ] 24. Add Riverpod providers for achievements and stats
+  - Create achievement providers in lib/providers/providers.dart
+  - Implement stats service provider with proper caching
+  - Add achievement progress providers with real-time updates
+  - Create heatmap data providers with efficient calculation
+  - Implement achievement notification provider for unlocked achievements
+  - Add proper provider disposal and memory management
+  - _Requirements: 11, 12_
+
+- [ ] 25. Create comprehensive testing for new features
+  - Write unit tests for Achievement model and AchievementService
+  - Create tests for Stats Service heatmap data calculation methods
+  - Implement widget tests for HeatmapWidget with different data scenarios
+  - Add tests for AchievementWidget display and progress functionality
+  - Create integration tests for achievement unlocking workflows
+  - Test heatmap interactivity and tooltip functionality
+  - Add tests for database migration and achievement initialization
+  - _Requirements: 11, 12_

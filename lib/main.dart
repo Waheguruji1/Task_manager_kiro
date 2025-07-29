@@ -5,7 +5,7 @@ import 'utils/theme.dart';
 import 'utils/constants.dart';
 import 'utils/error_handler.dart';
 import 'screens/welcome_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_navigation_screen.dart';
 import 'widgets/app_icon.dart';
 import 'providers/providers.dart';
 import 'providers/provider_observer.dart';
@@ -59,8 +59,8 @@ class TaskManagerApp extends StatelessWidget {
       // Navigation Configuration
       home: const AppInitializer(),
       routes: {
-        AppRoutes.welcome: (context) => const WelcomeScreen(),
-        AppRoutes.home: (context) => const HomeScreen(),
+        '/welcome': (context) => const WelcomeScreen(),
+        '/main': (context) => const MainNavigationScreen(),
       },
       
       // Default route for undefined routes
@@ -178,11 +178,11 @@ class _AppInitializerState extends ConsumerState<AppInitializer> with WidgetsBin
       
       if (mounted) {
         if (hasUserName) {
-          // User exists, navigate to home screen
-          Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+          // User exists, navigate to main screen
+          Navigator.of(context).pushReplacementNamed('/main');
         } else {
           // New user, navigate to welcome screen
-          Navigator.of(context).pushReplacementNamed(AppRoutes.welcome);
+          Navigator.of(context).pushReplacementNamed('/welcome');
         }
       }
     } catch (e) {
@@ -192,7 +192,7 @@ class _AppInitializerState extends ConsumerState<AppInitializer> with WidgetsBin
       // This ensures the app doesn't get stuck on the loading screen
       if (mounted) {
         try {
-          Navigator.of(context).pushReplacementNamed(AppRoutes.welcome);
+          Navigator.of(context).pushReplacementNamed('/welcome');
         } catch (navigationError) {
           ErrorHandler.logError(navigationError, context: 'Navigation fallback', type: ErrorType.unknown);
           // If navigation also fails, show error screen

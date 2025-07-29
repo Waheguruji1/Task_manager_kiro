@@ -1,5 +1,5 @@
 /// App Constants and String Literals
-/// 
+///
 /// This file contains all the constant values and string literals used
 /// throughout the Task Manager app to ensure consistency and easy maintenance.
 class AppConstants {
@@ -9,7 +9,8 @@ class AppConstants {
   // App Information
   static const String appName = 'Task Manager';
   static const String appVersion = '1.0.0';
-  static const String appDescription = 'A simple and elegant task management app';
+  static const String appDescription =
+      'A simple and elegant task management app';
 
   // SharedPreferences Keys
   static const String userNameKey = 'user_name';
@@ -37,6 +38,16 @@ class AppConstants {
   static const int minTaskTitleLength = 1;
 }
 
+/// Route Names
+class AppRoutes {
+  // Private constructor to prevent instantiation
+  AppRoutes._();
+
+  static const String welcome = '/welcome';
+  static const String home = '/home';
+  static const String main = '/main';
+}
+
 /// String Literals used throughout the app
 class AppStrings {
   // Private constructor to prevent instantiation
@@ -44,7 +55,8 @@ class AppStrings {
 
   // Welcome Screen
   static const String welcomeTitle = 'Welcome to ${AppConstants.appName}';
-  static const String welcomeSubtitle = 'Let\'s get started by knowing your name';
+  static const String welcomeSubtitle =
+      'Let\'s get started by knowing your name';
   static const String nameInputHint = 'Enter your name';
   static const String nameInputLabel = 'Your Name';
   static const String continueButton = 'Continue';
@@ -77,39 +89,58 @@ class AppStrings {
   // Task Status
   static const String taskCompleted = 'Task completed';
   static const String taskIncomplete = 'Task incomplete';
-  static const String noTasksMessage = 'No tasks yet. Tap + to add your first task!';
-  static const String noEverydayTasksMessage = 'No everyday tasks. Add some to get started!';
-  static const String noRoutineTasksMessage = 'No routine tasks. Create routines to stay consistent!';
+  static const String noTasksMessage =
+      'No tasks yet. Tap + to add your first task!';
+  static const String noEverydayTasksMessage =
+      'No everyday tasks. Add some to get started!';
+  static const String noRoutineTasksMessage =
+      'No routine tasks. Create routines to stay consistent!';
 
   // Confirmation Dialogs
   static const String deleteTaskTitle = 'Delete Task';
-  static const String deleteTaskMessage = 'Are you sure you want to delete this task? This action cannot be undone.';
+  static const String deleteTaskMessage =
+      'Are you sure you want to delete this task? This action cannot be undone.';
   static const String confirmButton = 'Confirm';
 
   // Error Messages
   static const String errorGeneral = 'Something went wrong. Please try again.';
-  static const String errorDatabaseConnection = 'Unable to connect to database. Please restart the app.';
-  static const String errorDatabaseLocked = 'Database is temporarily locked. Please try again.';
-  static const String errorDatabaseCorrupted = 'Database appears to be corrupted. Please restart the app.';
-  static const String errorDatabaseConstraint = 'Invalid data provided. Please check your input.';
-  static const String errorPreferences = 'Failed to save settings. Please try again.';
-  static const String errorValidation = 'Please check your input and try again.';
-  static const String errorSavingTask = 'Failed to save task. Please try again.';
-  static const String errorLoadingTasks = 'Failed to load tasks. Please try again.';
-  static const String errorDeletingTask = 'Failed to delete task. Please try again.';
-  static const String errorUpdatingTask = 'Failed to update task. Please try again.';
-  static const String errorSavingUserName = 'Failed to save your name. Please try again.';
+  static const String errorDatabaseConnection =
+      'Unable to connect to database. Please restart the app.';
+  static const String errorDatabaseLocked =
+      'Database is temporarily locked. Please try again.';
+  static const String errorDatabaseCorrupted =
+      'Database appears to be corrupted. Please restart the app.';
+  static const String errorDatabaseConstraint =
+      'Invalid data provided. Please check your input.';
+  static const String errorPreferences =
+      'Failed to save settings. Please try again.';
+  static const String errorValidation =
+      'Please check your input and try again.';
+  static const String errorSavingTask =
+      'Failed to save task. Please try again.';
+  static const String errorLoadingTasks =
+      'Failed to load tasks. Please try again.';
+  static const String errorDeletingTask =
+      'Failed to delete task. Please try again.';
+  static const String errorUpdatingTask =
+      'Failed to update task. Please try again.';
+  static const String errorSavingUserName =
+      'Failed to save your name. Please try again.';
   static const String errorLoadingUserName = 'Failed to load your name.';
 
   // Validation Messages
   static const String validationNameRequired = 'Please enter your name';
-  static const String validationNameTooLong = 'Name must be less than ${AppConstants.maxUserNameLength} characters';
+  static const String validationNameTooLong =
+      'Name must be less than ${AppConstants.maxUserNameLength} characters';
   static const String validationTaskTitleRequired = 'Please enter a task title';
-  static const String validationTaskTitleTooLong = 'Task title must be less than ${AppConstants.maxTaskTitleLength} characters';
-  static const String validationTaskDescriptionTooLong = 'Description must be less than ${AppConstants.maxTaskDescriptionLength} characters';
+  static const String validationTaskTitleTooLong =
+      'Task title must be less than ${AppConstants.maxTaskTitleLength} characters';
+  static const String validationTaskDescriptionTooLong =
+      'Description must be less than ${AppConstants.maxTaskDescriptionLength} characters';
 
   // Share Messages
-  static const String shareAppText = '${AppConstants.appName} - ${AppConstants.appDescription}\n\nDownload now!';
+  static const String shareAppText =
+      '${AppConstants.appName} - ${AppConstants.appDescription}\n\nDownload now!';
   static const String shareTaskText = 'Check out my task: ';
 
   // Accessibility Labels
@@ -148,8 +179,10 @@ class AppStrings {
   static const String taskCompletedSuccess = 'Great job! Task completed';
 
   // Time-based Messages
-  static const String routineTaskResetMessage = 'Routine tasks have been reset for today';
-  static const String dailyMotivation = 'You\'ve got this! Let\'s make today productive.';
+  static const String routineTaskResetMessage =
+      'Routine tasks have been reset for today';
+  static const String dailyMotivation =
+      'You\'ve got this! Let\'s make today productive.';
 }
 
 /// Icon Constants
@@ -184,16 +217,7 @@ class AppIcons {
   static const String time = 'access_time';
 }
 
-/// Route Names for Navigation
-class AppRoutes {
-  // Private constructor to prevent instantiation
-  AppRoutes._();
 
-  static const String welcome = '/welcome';
-  static const String home = '/home';
-  static const String addTask = '/add-task';
-  static const String editTask = '/edit-task';
-}
 
 /// Asset Paths
 class AppAssets {

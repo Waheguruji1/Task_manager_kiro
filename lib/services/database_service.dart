@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
+import 'package:flutter/material.dart';
 import '../models/database.dart';
 import '../models/task.dart';
+import '../models/achievement.dart';
 import '../utils/error_handler.dart';
 
 class DatabaseService {
@@ -394,6 +396,179 @@ class DatabaseService {
     }
   }
   
+  // ==================== ACHIEVEMENT OPERATIONS ====================
+  
+  /// Get all achievements
+  Future<List<Achievement>> getAllAchievements() async {
+    try {
+      final achievementDataList = await _database!.getAllAchievements();
+      return achievementDataList.map((data) => _achievementDataToAchievement(data)).toList();
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Get all achievements', type: ErrorType.database);
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Get all achievements'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
+  
+  /// Get earned achievements
+  Future<List<Achievement>> getEarnedAchievements() async {
+    try {
+      final achievementDataList = await _database!.getEarnedAchievements();
+      return achievementDataList.map((data) => _achievementDataToAchievement(data)).toList();
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Get earned achievements', type: ErrorType.database);
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Get earned achievements'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
+  
+  /// Get unearned achievements
+  Future<List<Achievement>> getUnearnedAchievements() async {
+    try {
+      final achievementDataList = await _database!.getUnearnedAchievements();
+      return achievementDataList.map((data) => _achievementDataToAchievement(data)).toList();
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Get unearned achievements', type: ErrorType.database);
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Get unearned achievements'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
+  
+  /// Get achievement by ID
+  Future<Achievement?> getAchievementById(String id) async {
+    try {
+      if (id.trim().isEmpty) {
+        throw AppException(
+          message: 'Achievement ID cannot be empty',
+          type: ErrorType.validation,
+        );
+      }
+      
+      final achievementData = await _database!.getAchievementById(id);
+      if (achievementData == null) return null;
+      return _achievementDataToAchievement(achievementData);
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Get achievement by ID', type: ErrorType.database);
+      if (e is AppException) {
+        rethrow;
+      }
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Get achievement by ID'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
+  
+  /// Update achievement progress
+  Future<bool> updateAchievementProgress(String id, int progress) async {
+    try {
+      if (id.trim().isEmpty) {
+        throw AppException(
+          message: 'Achievement ID cannot be empty',
+          type: ErrorType.validation,
+        );
+      }
+      
+      if (progress < 0) {
+        throw AppException(
+          message: 'Achievement progress cannot be negative',
+          type: ErrorType.validation,
+        );
+      }
+      
+      final updatedRows = await _database!.updateAchievementProgress(id, progress);
+      return updatedRows > 0;
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Update achievement progress', type: ErrorType.database);
+      if (e is AppException) {
+        rethrow;
+      }
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Update achievement progress'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
+  
+  /// Mark achievement as earned
+  Future<bool> earnAchievement(String id) async {
+    try {
+      if (id.trim().isEmpty) {
+        throw AppException(
+          message: 'Achievement ID cannot be empty',
+          type: ErrorType.validation,
+        );
+      }
+      
+      final updatedRows = await _database!.earnAchievement(id);
+      return updatedRows > 0;
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Earn achievement', type: ErrorType.database);
+      if (e is AppException) {
+        rethrow;
+      }
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Earn achievement'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
+  
+  /// Get achievements by type
+  Future<List<Achievement>> getAchievementsByType(AchievementType type) async {
+    try {
+      final achievementDataList = await _database!.getAchievementsByType(type);
+      return achievementDataList.map((data) => _achievementDataToAchievement(data)).toList();
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Get achievements by type', type: ErrorType.database);
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Get achievements by type'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
+  
+  /// Get earned achievement count
+  Future<int> getEarnedAchievementCount() async {
+    try {
+      return await _database!.getEarnedAchievementCount();
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Get earned achievement count', type: ErrorType.database);
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Get earned achievement count'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
+  
+  /// Get total achievement count
+  Future<int> getTotalAchievementCount() async {
+    try {
+      return await _database!.getTotalAchievementCount();
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Get total achievement count', type: ErrorType.database);
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Get total achievement count'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
+
   /// Close the database connection
   Future<void> close() async {
     try {
@@ -417,6 +592,21 @@ class DatabaseService {
       completedAt: taskData.completedAt,
       routineTaskId: taskData.routineTaskId,
       taskDate: taskData.taskDate,
+    );
+  }
+  
+  /// Convert AchievementData (from Drift) to Achievement model
+  Achievement _achievementDataToAchievement(AchievementData achievementData) {
+    return Achievement(
+      id: achievementData.id,
+      title: achievementData.title,
+      description: achievementData.description,
+      icon: IconData(achievementData.iconCodePoint, fontFamily: 'MaterialIcons'),
+      type: achievementData.type,
+      targetValue: achievementData.targetValue,
+      isEarned: achievementData.isEarned,
+      earnedAt: achievementData.earnedAt,
+      currentProgress: achievementData.currentProgress,
     );
   }
 }

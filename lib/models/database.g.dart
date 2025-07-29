@@ -498,15 +498,520 @@ class TasksCompanion extends UpdateCompanion<TaskData> {
   }
 }
 
+class $AchievementsTable extends Achievements
+    with TableInfo<$AchievementsTable, AchievementData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AchievementsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+      'title', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 255),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true);
+  static const VerificationMeta _descriptionMeta =
+      const VerificationMeta('description');
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+      'description', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _iconCodePointMeta =
+      const VerificationMeta('iconCodePoint');
+  @override
+  late final GeneratedColumn<int> iconCodePoint = GeneratedColumn<int>(
+      'icon_code_point', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  @override
+  late final GeneratedColumnWithTypeConverter<AchievementType, int> type =
+      GeneratedColumn<int>('type', aliasedName, false,
+              type: DriftSqlType.int, requiredDuringInsert: true)
+          .withConverter<AchievementType>($AchievementsTable.$convertertype);
+  static const VerificationMeta _targetValueMeta =
+      const VerificationMeta('targetValue');
+  @override
+  late final GeneratedColumn<int> targetValue = GeneratedColumn<int>(
+      'target_value', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _isEarnedMeta =
+      const VerificationMeta('isEarned');
+  @override
+  late final GeneratedColumn<bool> isEarned = GeneratedColumn<bool>(
+      'is_earned', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_earned" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _earnedAtMeta =
+      const VerificationMeta('earnedAt');
+  @override
+  late final GeneratedColumn<DateTime> earnedAt = GeneratedColumn<DateTime>(
+      'earned_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _currentProgressMeta =
+      const VerificationMeta('currentProgress');
+  @override
+  late final GeneratedColumn<int> currentProgress = GeneratedColumn<int>(
+      'current_progress', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        title,
+        description,
+        iconCodePoint,
+        type,
+        targetValue,
+        isEarned,
+        earnedAt,
+        currentProgress
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'achievements';
+  @override
+  VerificationContext validateIntegrity(Insertable<AchievementData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+          _descriptionMeta,
+          description.isAcceptableOrUnknown(
+              data['description']!, _descriptionMeta));
+    } else if (isInserting) {
+      context.missing(_descriptionMeta);
+    }
+    if (data.containsKey('icon_code_point')) {
+      context.handle(
+          _iconCodePointMeta,
+          iconCodePoint.isAcceptableOrUnknown(
+              data['icon_code_point']!, _iconCodePointMeta));
+    } else if (isInserting) {
+      context.missing(_iconCodePointMeta);
+    }
+    if (data.containsKey('target_value')) {
+      context.handle(
+          _targetValueMeta,
+          targetValue.isAcceptableOrUnknown(
+              data['target_value']!, _targetValueMeta));
+    } else if (isInserting) {
+      context.missing(_targetValueMeta);
+    }
+    if (data.containsKey('is_earned')) {
+      context.handle(_isEarnedMeta,
+          isEarned.isAcceptableOrUnknown(data['is_earned']!, _isEarnedMeta));
+    }
+    if (data.containsKey('earned_at')) {
+      context.handle(_earnedAtMeta,
+          earnedAt.isAcceptableOrUnknown(data['earned_at']!, _earnedAtMeta));
+    }
+    if (data.containsKey('current_progress')) {
+      context.handle(
+          _currentProgressMeta,
+          currentProgress.isAcceptableOrUnknown(
+              data['current_progress']!, _currentProgressMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AchievementData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AchievementData(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      title: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      description: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}description'])!,
+      iconCodePoint: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}icon_code_point'])!,
+      type: $AchievementsTable.$convertertype.fromSql(attachedDatabase
+          .typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}type'])!),
+      targetValue: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}target_value'])!,
+      isEarned: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_earned'])!,
+      earnedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}earned_at']),
+      currentProgress: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}current_progress'])!,
+    );
+  }
+
+  @override
+  $AchievementsTable createAlias(String alias) {
+    return $AchievementsTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<AchievementType, int, int> $convertertype =
+      const EnumIndexConverter<AchievementType>(AchievementType.values);
+}
+
+class AchievementData extends DataClass implements Insertable<AchievementData> {
+  /// Primary key - achievement ID as string
+  final String id;
+
+  /// Achievement title - required, non-empty string with length constraints
+  final String title;
+
+  /// Achievement description - required description text
+  final String description;
+
+  /// Icon code point for MaterialIcons
+  final int iconCodePoint;
+
+  /// Achievement type as integer enum value
+  final AchievementType type;
+
+  /// Target value required to earn this achievement
+  final int targetValue;
+
+  /// Whether this achievement has been earned - defaults to false
+  final bool isEarned;
+
+  /// Timestamp when achievement was earned - null until earned
+  final DateTime? earnedAt;
+
+  /// Current progress towards earning this achievement - defaults to 0
+  final int currentProgress;
+  const AchievementData(
+      {required this.id,
+      required this.title,
+      required this.description,
+      required this.iconCodePoint,
+      required this.type,
+      required this.targetValue,
+      required this.isEarned,
+      this.earnedAt,
+      required this.currentProgress});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['title'] = Variable<String>(title);
+    map['description'] = Variable<String>(description);
+    map['icon_code_point'] = Variable<int>(iconCodePoint);
+    {
+      map['type'] =
+          Variable<int>($AchievementsTable.$convertertype.toSql(type));
+    }
+    map['target_value'] = Variable<int>(targetValue);
+    map['is_earned'] = Variable<bool>(isEarned);
+    if (!nullToAbsent || earnedAt != null) {
+      map['earned_at'] = Variable<DateTime>(earnedAt);
+    }
+    map['current_progress'] = Variable<int>(currentProgress);
+    return map;
+  }
+
+  AchievementsCompanion toCompanion(bool nullToAbsent) {
+    return AchievementsCompanion(
+      id: Value(id),
+      title: Value(title),
+      description: Value(description),
+      iconCodePoint: Value(iconCodePoint),
+      type: Value(type),
+      targetValue: Value(targetValue),
+      isEarned: Value(isEarned),
+      earnedAt: earnedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(earnedAt),
+      currentProgress: Value(currentProgress),
+    );
+  }
+
+  factory AchievementData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AchievementData(
+      id: serializer.fromJson<String>(json['id']),
+      title: serializer.fromJson<String>(json['title']),
+      description: serializer.fromJson<String>(json['description']),
+      iconCodePoint: serializer.fromJson<int>(json['iconCodePoint']),
+      type: $AchievementsTable.$convertertype
+          .fromJson(serializer.fromJson<int>(json['type'])),
+      targetValue: serializer.fromJson<int>(json['targetValue']),
+      isEarned: serializer.fromJson<bool>(json['isEarned']),
+      earnedAt: serializer.fromJson<DateTime?>(json['earnedAt']),
+      currentProgress: serializer.fromJson<int>(json['currentProgress']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'title': serializer.toJson<String>(title),
+      'description': serializer.toJson<String>(description),
+      'iconCodePoint': serializer.toJson<int>(iconCodePoint),
+      'type': serializer
+          .toJson<int>($AchievementsTable.$convertertype.toJson(type)),
+      'targetValue': serializer.toJson<int>(targetValue),
+      'isEarned': serializer.toJson<bool>(isEarned),
+      'earnedAt': serializer.toJson<DateTime?>(earnedAt),
+      'currentProgress': serializer.toJson<int>(currentProgress),
+    };
+  }
+
+  AchievementData copyWith(
+          {String? id,
+          String? title,
+          String? description,
+          int? iconCodePoint,
+          AchievementType? type,
+          int? targetValue,
+          bool? isEarned,
+          Value<DateTime?> earnedAt = const Value.absent(),
+          int? currentProgress}) =>
+      AchievementData(
+        id: id ?? this.id,
+        title: title ?? this.title,
+        description: description ?? this.description,
+        iconCodePoint: iconCodePoint ?? this.iconCodePoint,
+        type: type ?? this.type,
+        targetValue: targetValue ?? this.targetValue,
+        isEarned: isEarned ?? this.isEarned,
+        earnedAt: earnedAt.present ? earnedAt.value : this.earnedAt,
+        currentProgress: currentProgress ?? this.currentProgress,
+      );
+  AchievementData copyWithCompanion(AchievementsCompanion data) {
+    return AchievementData(
+      id: data.id.present ? data.id.value : this.id,
+      title: data.title.present ? data.title.value : this.title,
+      description:
+          data.description.present ? data.description.value : this.description,
+      iconCodePoint: data.iconCodePoint.present
+          ? data.iconCodePoint.value
+          : this.iconCodePoint,
+      type: data.type.present ? data.type.value : this.type,
+      targetValue:
+          data.targetValue.present ? data.targetValue.value : this.targetValue,
+      isEarned: data.isEarned.present ? data.isEarned.value : this.isEarned,
+      earnedAt: data.earnedAt.present ? data.earnedAt.value : this.earnedAt,
+      currentProgress: data.currentProgress.present
+          ? data.currentProgress.value
+          : this.currentProgress,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AchievementData(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('description: $description, ')
+          ..write('iconCodePoint: $iconCodePoint, ')
+          ..write('type: $type, ')
+          ..write('targetValue: $targetValue, ')
+          ..write('isEarned: $isEarned, ')
+          ..write('earnedAt: $earnedAt, ')
+          ..write('currentProgress: $currentProgress')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, title, description, iconCodePoint, type,
+      targetValue, isEarned, earnedAt, currentProgress);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AchievementData &&
+          other.id == this.id &&
+          other.title == this.title &&
+          other.description == this.description &&
+          other.iconCodePoint == this.iconCodePoint &&
+          other.type == this.type &&
+          other.targetValue == this.targetValue &&
+          other.isEarned == this.isEarned &&
+          other.earnedAt == this.earnedAt &&
+          other.currentProgress == this.currentProgress);
+}
+
+class AchievementsCompanion extends UpdateCompanion<AchievementData> {
+  final Value<String> id;
+  final Value<String> title;
+  final Value<String> description;
+  final Value<int> iconCodePoint;
+  final Value<AchievementType> type;
+  final Value<int> targetValue;
+  final Value<bool> isEarned;
+  final Value<DateTime?> earnedAt;
+  final Value<int> currentProgress;
+  final Value<int> rowid;
+  const AchievementsCompanion({
+    this.id = const Value.absent(),
+    this.title = const Value.absent(),
+    this.description = const Value.absent(),
+    this.iconCodePoint = const Value.absent(),
+    this.type = const Value.absent(),
+    this.targetValue = const Value.absent(),
+    this.isEarned = const Value.absent(),
+    this.earnedAt = const Value.absent(),
+    this.currentProgress = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AchievementsCompanion.insert({
+    required String id,
+    required String title,
+    required String description,
+    required int iconCodePoint,
+    required AchievementType type,
+    required int targetValue,
+    this.isEarned = const Value.absent(),
+    this.earnedAt = const Value.absent(),
+    this.currentProgress = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        title = Value(title),
+        description = Value(description),
+        iconCodePoint = Value(iconCodePoint),
+        type = Value(type),
+        targetValue = Value(targetValue);
+  static Insertable<AchievementData> custom({
+    Expression<String>? id,
+    Expression<String>? title,
+    Expression<String>? description,
+    Expression<int>? iconCodePoint,
+    Expression<int>? type,
+    Expression<int>? targetValue,
+    Expression<bool>? isEarned,
+    Expression<DateTime>? earnedAt,
+    Expression<int>? currentProgress,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (title != null) 'title': title,
+      if (description != null) 'description': description,
+      if (iconCodePoint != null) 'icon_code_point': iconCodePoint,
+      if (type != null) 'type': type,
+      if (targetValue != null) 'target_value': targetValue,
+      if (isEarned != null) 'is_earned': isEarned,
+      if (earnedAt != null) 'earned_at': earnedAt,
+      if (currentProgress != null) 'current_progress': currentProgress,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AchievementsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? title,
+      Value<String>? description,
+      Value<int>? iconCodePoint,
+      Value<AchievementType>? type,
+      Value<int>? targetValue,
+      Value<bool>? isEarned,
+      Value<DateTime?>? earnedAt,
+      Value<int>? currentProgress,
+      Value<int>? rowid}) {
+    return AchievementsCompanion(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      iconCodePoint: iconCodePoint ?? this.iconCodePoint,
+      type: type ?? this.type,
+      targetValue: targetValue ?? this.targetValue,
+      isEarned: isEarned ?? this.isEarned,
+      earnedAt: earnedAt ?? this.earnedAt,
+      currentProgress: currentProgress ?? this.currentProgress,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (iconCodePoint.present) {
+      map['icon_code_point'] = Variable<int>(iconCodePoint.value);
+    }
+    if (type.present) {
+      map['type'] =
+          Variable<int>($AchievementsTable.$convertertype.toSql(type.value));
+    }
+    if (targetValue.present) {
+      map['target_value'] = Variable<int>(targetValue.value);
+    }
+    if (isEarned.present) {
+      map['is_earned'] = Variable<bool>(isEarned.value);
+    }
+    if (earnedAt.present) {
+      map['earned_at'] = Variable<DateTime>(earnedAt.value);
+    }
+    if (currentProgress.present) {
+      map['current_progress'] = Variable<int>(currentProgress.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AchievementsCompanion(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('description: $description, ')
+          ..write('iconCodePoint: $iconCodePoint, ')
+          ..write('type: $type, ')
+          ..write('targetValue: $targetValue, ')
+          ..write('isEarned: $isEarned, ')
+          ..write('earnedAt: $earnedAt, ')
+          ..write('currentProgress: $currentProgress, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $TasksTable tasks = $TasksTable(this);
+  late final $AchievementsTable achievements = $AchievementsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [tasks];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [tasks, achievements];
 }
 
 typedef $$TasksTableCreateCompanionBuilder = TasksCompanion Function({
@@ -728,10 +1233,250 @@ typedef $$TasksTableProcessedTableManager = ProcessedTableManager<
     (TaskData, BaseReferences<_$AppDatabase, $TasksTable, TaskData>),
     TaskData,
     PrefetchHooks Function()>;
+typedef $$AchievementsTableCreateCompanionBuilder = AchievementsCompanion
+    Function({
+  required String id,
+  required String title,
+  required String description,
+  required int iconCodePoint,
+  required AchievementType type,
+  required int targetValue,
+  Value<bool> isEarned,
+  Value<DateTime?> earnedAt,
+  Value<int> currentProgress,
+  Value<int> rowid,
+});
+typedef $$AchievementsTableUpdateCompanionBuilder = AchievementsCompanion
+    Function({
+  Value<String> id,
+  Value<String> title,
+  Value<String> description,
+  Value<int> iconCodePoint,
+  Value<AchievementType> type,
+  Value<int> targetValue,
+  Value<bool> isEarned,
+  Value<DateTime?> earnedAt,
+  Value<int> currentProgress,
+  Value<int> rowid,
+});
+
+class $$AchievementsTableFilterComposer
+    extends Composer<_$AppDatabase, $AchievementsTable> {
+  $$AchievementsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get iconCodePoint => $composableBuilder(
+      column: $table.iconCodePoint, builder: (column) => ColumnFilters(column));
+
+  ColumnWithTypeConverterFilters<AchievementType, AchievementType, int>
+      get type => $composableBuilder(
+          column: $table.type,
+          builder: (column) => ColumnWithTypeConverterFilters(column));
+
+  ColumnFilters<int> get targetValue => $composableBuilder(
+      column: $table.targetValue, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isEarned => $composableBuilder(
+      column: $table.isEarned, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get earnedAt => $composableBuilder(
+      column: $table.earnedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get currentProgress => $composableBuilder(
+      column: $table.currentProgress,
+      builder: (column) => ColumnFilters(column));
+}
+
+class $$AchievementsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AchievementsTable> {
+  $$AchievementsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get iconCodePoint => $composableBuilder(
+      column: $table.iconCodePoint,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get type => $composableBuilder(
+      column: $table.type, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get targetValue => $composableBuilder(
+      column: $table.targetValue, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isEarned => $composableBuilder(
+      column: $table.isEarned, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get earnedAt => $composableBuilder(
+      column: $table.earnedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get currentProgress => $composableBuilder(
+      column: $table.currentProgress,
+      builder: (column) => ColumnOrderings(column));
+}
+
+class $$AchievementsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AchievementsTable> {
+  $$AchievementsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => column);
+
+  GeneratedColumn<int> get iconCodePoint => $composableBuilder(
+      column: $table.iconCodePoint, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<AchievementType, int> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<int> get targetValue => $composableBuilder(
+      column: $table.targetValue, builder: (column) => column);
+
+  GeneratedColumn<bool> get isEarned =>
+      $composableBuilder(column: $table.isEarned, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get earnedAt =>
+      $composableBuilder(column: $table.earnedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get currentProgress => $composableBuilder(
+      column: $table.currentProgress, builder: (column) => column);
+}
+
+class $$AchievementsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $AchievementsTable,
+    AchievementData,
+    $$AchievementsTableFilterComposer,
+    $$AchievementsTableOrderingComposer,
+    $$AchievementsTableAnnotationComposer,
+    $$AchievementsTableCreateCompanionBuilder,
+    $$AchievementsTableUpdateCompanionBuilder,
+    (
+      AchievementData,
+      BaseReferences<_$AppDatabase, $AchievementsTable, AchievementData>
+    ),
+    AchievementData,
+    PrefetchHooks Function()> {
+  $$AchievementsTableTableManager(_$AppDatabase db, $AchievementsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AchievementsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AchievementsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AchievementsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> title = const Value.absent(),
+            Value<String> description = const Value.absent(),
+            Value<int> iconCodePoint = const Value.absent(),
+            Value<AchievementType> type = const Value.absent(),
+            Value<int> targetValue = const Value.absent(),
+            Value<bool> isEarned = const Value.absent(),
+            Value<DateTime?> earnedAt = const Value.absent(),
+            Value<int> currentProgress = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              AchievementsCompanion(
+            id: id,
+            title: title,
+            description: description,
+            iconCodePoint: iconCodePoint,
+            type: type,
+            targetValue: targetValue,
+            isEarned: isEarned,
+            earnedAt: earnedAt,
+            currentProgress: currentProgress,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String title,
+            required String description,
+            required int iconCodePoint,
+            required AchievementType type,
+            required int targetValue,
+            Value<bool> isEarned = const Value.absent(),
+            Value<DateTime?> earnedAt = const Value.absent(),
+            Value<int> currentProgress = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              AchievementsCompanion.insert(
+            id: id,
+            title: title,
+            description: description,
+            iconCodePoint: iconCodePoint,
+            type: type,
+            targetValue: targetValue,
+            isEarned: isEarned,
+            earnedAt: earnedAt,
+            currentProgress: currentProgress,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$AchievementsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $AchievementsTable,
+    AchievementData,
+    $$AchievementsTableFilterComposer,
+    $$AchievementsTableOrderingComposer,
+    $$AchievementsTableAnnotationComposer,
+    $$AchievementsTableCreateCompanionBuilder,
+    $$AchievementsTableUpdateCompanionBuilder,
+    (
+      AchievementData,
+      BaseReferences<_$AppDatabase, $AchievementsTable, AchievementData>
+    ),
+    AchievementData,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
   $$TasksTableTableManager get tasks =>
       $$TasksTableTableManager(_db, _db.tasks);
+  $$AchievementsTableTableManager get achievements =>
+      $$AchievementsTableTableManager(_db, _db.achievements);
 }

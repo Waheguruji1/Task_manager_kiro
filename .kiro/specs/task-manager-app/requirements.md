@@ -151,6 +151,40 @@ This document outlines the requirements for a personalized task manager Flutter 
 
 ### Requirement 11
 
+**User Story:** As a user, I want to see visual heatmaps of my task completion activity over time, so that I can understand my productivity patterns and stay motivated through visual feedback.
+
+#### Acceptance Criteria
+
+1. WHEN the stats screen is displayed THEN the system SHALL show a task completion activity heatmap with purple color scheme
+2. WHEN the completion heatmap is rendered THEN the system SHALL display a calendar-style grid showing daily task completion counts
+3. WHEN the completion heatmap is shown THEN the system SHALL use varying shades of purple to indicate completion intensity (lighter for fewer tasks, darker for more tasks)
+4. WHEN the stats screen is displayed THEN the system SHALL show a task creation vs completion heatmap with green color scheme
+5. WHEN the creation vs completion heatmap is rendered THEN the system SHALL display both tasks created and completed per day
+6. WHEN the creation vs completion heatmap is shown THEN the system SHALL use green color variations to show the balance between created and completed tasks
+7. WHEN heatmaps are displayed THEN the system SHALL show data for the current year with monthly organization
+8. WHEN a user interacts with heatmap cells THEN the system SHALL show tooltip information with specific counts for that day
+9. WHEN heatmaps are rendered THEN the system SHALL handle empty days gracefully with appropriate neutral colors
+10. WHEN the stats screen loads THEN the system SHALL calculate heatmap data from the task database efficiently
+
+### Requirement 12
+
+**User Story:** As a user, I want to earn and view achievements based on my task completion behavior, so that I feel motivated and rewarded for maintaining good productivity habits.
+
+#### Acceptance Criteria
+
+1. WHEN the stats screen is displayed THEN the system SHALL show an achievements section below the heatmaps
+2. WHEN achievements are calculated THEN the system SHALL track task completion streaks and award streak-based achievements
+3. WHEN achievements are evaluated THEN the system SHALL recognize daily completion milestones (5, 10, 20 tasks in a day)
+4. WHEN achievements are processed THEN the system SHALL track weekly and monthly completion goals
+5. WHEN achievements are determined THEN the system SHALL award achievements for routine task consistency
+6. WHEN the achievements section is rendered THEN the system SHALL display earned achievements with icons, titles, and descriptions
+7. WHEN achievements are shown THEN the system SHALL indicate progress toward unearned achievements
+8. WHEN achievements are displayed THEN the system SHALL use visual indicators (badges, progress bars) to show achievement status
+9. WHEN new achievements are earned THEN the system SHALL store achievement data persistently in the database
+10. WHEN achievements are calculated THEN the system SHALL include achievements for: "First Task", "Week Warrior" (7 days streak), "Month Master" (30 days streak), "Routine Champion" (complete all routine tasks for 7 days), "Task Tornado" (20 tasks in one day)
+
+### Requirement 13
+
 **User Story:** As a developer, I want the option to implement an intro slider later with explicit permission, so that I can add onboarding features when appropriate without disrupting the current development flow.
 
 #### Acceptance Criteria

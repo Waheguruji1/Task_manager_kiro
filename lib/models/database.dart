@@ -3,6 +3,8 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:flutter/material.dart' hide Table, Column;
+import 'achievement.dart';
 
 // Import the generated code
 part 'database.g.dart';
@@ -41,18 +43,55 @@ class Tasks extends Table {
   DateTimeColumn get taskDate => dateTime().nullable()();
 }
 
+/// Achievements table definition for Drift database
+/// 
+/// Defines the structure and constraints for storing achievement data
+/// with proper data types and validation rules.
+@DataClassName('AchievementData')
+class Achievements extends Table {
+  /// Primary key - achievement ID as string
+  TextColumn get id => text()();
+  
+  /// Achievement title - required, non-empty string with length constraints
+  TextColumn get title => text().withLength(min: 1, max: 255)();
+  
+  /// Achievement description - required description text
+  TextColumn get description => text()();
+  
+  /// Icon code point for MaterialIcons
+  IntColumn get iconCodePoint => integer()();
+  
+  /// Achievement type as integer enum value
+  IntColumn get type => intEnum<AchievementType>()();
+  
+  /// Target value required to earn this achievement
+  IntColumn get targetValue => integer()();
+  
+  /// Whether this achievement has been earned - defaults to false
+  BoolColumn get isEarned => boolean().withDefault(const Constant(false))();
+  
+  /// Timestamp when achievement was earned - null until earned
+  DateTimeColumn get earnedAt => dateTime().nullable()();
+  
+  /// Current progress towards earning this achievement - defaults to 0
+  IntColumn get currentProgress => integer().withDefault(const Constant(0))();
+  
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 /// Main database class for the Task Manager app
 /// 
 /// Provides type-safe database operations using Drift ORM
 /// with proper connection management and query methods.
-@DriftDatabase(tables: [Tasks])
+@DriftDatabase(tables: [Tasks, Achievements])
 class AppDatabase extends _$AppDatabase {
   /// Creates database instance with proper connection
   AppDatabase() : super(_openConnection());
 
   /// Database schema version for migrations
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   /// Database migration logic and index creation
   @override
@@ -105,6 +144,25 @@ class AppDatabase extends _$AppDatabase {
           CREATE INDEX IF NOT EXISTS idx_tasks_task_date 
           ON tasks (task_date);
         ''');
+        
+        // Create indexes for achievements table
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_achievements_is_earned 
+          ON achievements (is_earned);
+        ''');
+        
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_achievements_type 
+          ON achievements (type);
+        ''');
+        
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_achievements_earned_at 
+          ON achievements (earned_at);
+        ''');
+        
+        // Initialize default achievements
+        await _initializeDefaultAchievements();
       },
       onUpgrade: (Migrator m, int from, int to) async {
         // Handle schema upgrades
@@ -128,6 +186,30 @@ class AppDatabase extends _$AppDatabase {
             CREATE INDEX IF NOT EXISTS idx_tasks_task_date 
             ON tasks (task_date);
           ''');
+        }
+        
+        if (from < 3) {
+          // Add achievements table
+          await m.createTable(achievements);
+          
+          // Create indexes for achievements table
+          await customStatement('''
+            CREATE INDEX IF NOT EXISTS idx_achievements_is_earned 
+            ON achievements (is_earned);
+          ''');
+          
+          await customStatement('''
+            CREATE INDEX IF NOT EXISTS idx_achievements_type 
+            ON achievements (type);
+          ''');
+          
+          await customStatement('''
+            CREATE INDEX IF NOT EXISTS idx_achievements_earned_at 
+            ON achievements (earned_at);
+          ''');
+          
+          // Initialize default achievements
+          await _initializeDefaultAchievements();
         }
       },
     );
@@ -378,6 +460,231 @@ class AppDatabase extends _$AppDatabase {
       }
       return totalUpdated;
     });
+  }
+
+  // ==================== ACHIEVEMENT CRUD OPERATIONS ====================
+
+  /// Retrieves all achievements from the database
+  /// 
+  /// Returns a list of all achievements ordered by earned status and title
+  Future<List<AchievementData>> getAllAchievements() {
+    return (select(achievements)
+      ..orderBy([
+        (a) => OrderingTerm(expression: a.isEarned, mode: OrderingMode.desc),
+        (a) => OrderingTerm(expression: a.title, mode: OrderingMode.asc)
+      ])).get();
+  }
+
+  /// Retrieves all earned achievements
+  /// 
+  /// Returns achievements that have been earned, ordered by earned date
+  Future<List<AchievementData>> getEarnedAchievements() {
+    return (select(achievements)
+      ..where((a) => a.isEarned.equals(true))
+      ..orderBy([
+        (a) => OrderingTerm(expression: a.earnedAt, mode: OrderingMode.desc)
+      ])).get();
+  }
+
+  /// Retrieves all unearned achievements
+  /// 
+  /// Returns achievements that have not been earned yet, ordered by progress
+  Future<List<AchievementData>> getUnearnedAchievements() {
+    return (select(achievements)
+      ..where((a) => a.isEarned.equals(false))
+      ..orderBy([
+        (a) => OrderingTerm(expression: a.currentProgress, mode: OrderingMode.desc),
+        (a) => OrderingTerm(expression: a.title, mode: OrderingMode.asc)
+      ])).get();
+  }
+
+  /// Retrieves achievements by type
+  /// 
+  /// [type] The achievement type to filter by
+  /// Returns achievements of the specified type
+  Future<List<AchievementData>> getAchievementsByType(AchievementType type) {
+    return (select(achievements)
+      ..where((a) => a.type.equals(type.index))
+      ..orderBy([
+        (a) => OrderingTerm(expression: a.isEarned, mode: OrderingMode.desc),
+        (a) => OrderingTerm(expression: a.currentProgress, mode: OrderingMode.desc)
+      ])).get();
+  }
+
+  /// Retrieves a specific achievement by ID
+  /// 
+  /// [id] The achievement ID to look for
+  /// Returns the achievement if found, null otherwise
+  Future<AchievementData?> getAchievementById(String id) {
+    return (select(achievements)..where((a) => a.id.equals(id))).getSingleOrNull();
+  }
+
+  /// Inserts a new achievement into the database
+  /// 
+  /// [achievement] The achievement data to insert
+  /// Returns the number of rows affected (should be 1 for successful insertion)
+  Future<int> insertAchievement(AchievementsCompanion achievement) {
+    return into(achievements).insert(achievement);
+  }
+
+  /// Updates an existing achievement in the database
+  /// 
+  /// [achievement] The achievement data with updated values
+  /// Returns true if the update was successful
+  Future<bool> updateAchievement(AchievementsCompanion achievement) {
+    return update(achievements).replace(achievement);
+  }
+
+  /// Updates achievement progress
+  /// 
+  /// [id] The achievement ID to update
+  /// [progress] The new progress value
+  /// Returns the number of rows affected
+  Future<int> updateAchievementProgress(String id, int progress) {
+    return (update(achievements)..where((a) => a.id.equals(id))).write(
+      AchievementsCompanion(
+        currentProgress: Value(progress),
+      ),
+    );
+  }
+
+  /// Marks an achievement as earned
+  /// 
+  /// [id] The achievement ID to mark as earned
+  /// Returns the number of rows affected
+  Future<int> earnAchievement(String id) {
+    final now = DateTime.now();
+    return (update(achievements)..where((a) => a.id.equals(id))).write(
+      AchievementsCompanion(
+        isEarned: const Value(true),
+        earnedAt: Value(now),
+      ),
+    );
+  }
+
+  /// Deletes an achievement from the database
+  /// 
+  /// [id] The ID of the achievement to delete
+  /// Returns the number of rows affected (should be 1 for successful deletion)
+  Future<int> deleteAchievement(String id) {
+    return (delete(achievements)..where((a) => a.id.equals(id))).go();
+  }
+
+  /// Gets the count of earned achievements
+  Future<int> getEarnedAchievementCount() async {
+    final countQuery = selectOnly(achievements)
+      ..addColumns([achievements.id.count()])
+      ..where(achievements.isEarned.equals(true));
+    final result = await countQuery.getSingle();
+    return result.read(achievements.id.count()) ?? 0;
+  }
+
+  /// Gets the total count of achievements
+  Future<int> getTotalAchievementCount() async {
+    final countQuery = selectOnly(achievements)..addColumns([achievements.id.count()]);
+    final result = await countQuery.getSingle();
+    return result.read(achievements.id.count()) ?? 0;
+  }
+
+  /// Resets all achievement progress (useful for testing or data reset)
+  /// 
+  /// Returns the number of achievements that were reset
+  Future<int> resetAllAchievements() async {
+    return await transaction(() async {
+      return (update(achievements)).write(
+        const AchievementsCompanion(
+          isEarned: Value(false),
+          earnedAt: Value(null),
+          currentProgress: Value(0),
+        ),
+      );
+    });
+  }
+
+  /// Initialize default achievements in the database
+  /// 
+  /// This method creates the standard set of achievements that users can earn
+  /// based on their task completion behavior and patterns.
+  Future<void> _initializeDefaultAchievements() async {
+    final defaultAchievements = [
+      AchievementsCompanion.insert(
+        id: 'first_task',
+        title: 'First Task',
+        description: 'Complete your first task',
+        iconCodePoint: Icons.star.codePoint,
+        type: AchievementType.firstTime,
+        targetValue: 1,
+      ),
+      AchievementsCompanion.insert(
+        id: 'week_warrior',
+        title: 'Week Warrior',
+        description: 'Complete tasks for 7 consecutive days',
+        iconCodePoint: Icons.local_fire_department.codePoint,
+        type: AchievementType.streak,
+        targetValue: 7,
+      ),
+      AchievementsCompanion.insert(
+        id: 'month_master',
+        title: 'Month Master',
+        description: 'Complete tasks for 30 consecutive days',
+        iconCodePoint: Icons.emoji_events.codePoint,
+        type: AchievementType.streak,
+        targetValue: 30,
+      ),
+      AchievementsCompanion.insert(
+        id: 'routine_champion',
+        title: 'Routine Champion',
+        description: 'Complete all routine tasks for 7 consecutive days',
+        iconCodePoint: Icons.repeat.codePoint,
+        type: AchievementType.routineConsistency,
+        targetValue: 7,
+      ),
+      AchievementsCompanion.insert(
+        id: 'task_tornado',
+        title: 'Task Tornado',
+        description: 'Complete 20 tasks in a single day',
+        iconCodePoint: Icons.flash_on.codePoint,
+        type: AchievementType.dailyCompletion,
+        targetValue: 20,
+      ),
+      AchievementsCompanion.insert(
+        id: 'daily_achiever',
+        title: 'Daily Achiever',
+        description: 'Complete 5 tasks in a single day',
+        iconCodePoint: Icons.check_circle.codePoint,
+        type: AchievementType.dailyCompletion,
+        targetValue: 5,
+      ),
+      AchievementsCompanion.insert(
+        id: 'super_achiever',
+        title: 'Super Achiever',
+        description: 'Complete 10 tasks in a single day',
+        iconCodePoint: Icons.stars.codePoint,
+        type: AchievementType.dailyCompletion,
+        targetValue: 10,
+      ),
+      AchievementsCompanion.insert(
+        id: 'consistency_king',
+        title: 'Consistency King',
+        description: 'Complete tasks for 14 consecutive days',
+        iconCodePoint: Icons.trending_up.codePoint,
+        type: AchievementType.streak,
+        targetValue: 14,
+      ),
+    ];
+
+    // Insert achievements, updating if they already exist
+    for (final achievement in defaultAchievements) {
+      try {
+        await into(achievements).insertOnConflictUpdate(achievement);
+      } catch (e) {
+        // If insertOnConflictUpdate is not available, try individual insert
+        final existing = await getAchievementById(achievement.id.value);
+        if (existing == null) {
+          await into(achievements).insert(achievement);
+        }
+      }
+    }
   }
 }
 

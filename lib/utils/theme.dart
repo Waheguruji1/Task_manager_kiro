@@ -22,6 +22,7 @@ class AppTheme {
   static const Color greyPrimary = Color(0xFF4A4A4A);
   static const Color greyLight = Color(0xFF6A6A6A);
   static const Color greyDark = Color(0xFF2A2A2A);
+  static const Color purplePrimary = Color(0xFF8B5CF6);
   
   // UI Element Colors
   static const Color borderWhite = Color(0xFFFFFFFF);

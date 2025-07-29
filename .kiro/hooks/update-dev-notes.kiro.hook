@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "Update Dev Notes",
+  "description": "Automatically updates dev_notes.md file after each successful task completion to maintain project documentation",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/**/*.dart",
+      "test/**/*.dart",
+      "pubspec.yaml"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A task has been completed successfully. Please update the dev_notes.md file with relevant information about what was accomplished, including any new features, bug fixes, or improvements made. Focus on documenting the changes in a clear and concise manner that would be helpful for future development work."
+  }
+}

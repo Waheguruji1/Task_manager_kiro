@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/widgets/task_item.dart';
-import '../lib/widgets/task_container.dart';
-import '../lib/models/task.dart';
-import '../lib/utils/theme.dart';
+import 'package:task_manager_kiro/widgets/task_item.dart';
+import 'package:task_manager_kiro/widgets/task_container.dart';
+import 'package:task_manager_kiro/models/task.dart';
+import 'package:task_manager_kiro/utils/theme.dart';
 
 void main() {
   group('Visual Styling Tests', () {

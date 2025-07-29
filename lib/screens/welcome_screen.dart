@@ -51,7 +51,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
       if (success && mounted) {
         ErrorHandler.showSuccessSnackBar(context, 'Welcome, $name!');
-        _navigateToHome();
+        _navigateToMain();
       } else if (mounted) {
         ErrorHandler.showErrorSnackBar(context, AppStrings.errorSavingUserName);
       }
@@ -73,9 +73,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     }
   }
 
-  /// Navigate to home screen
-  void _navigateToHome() {
-    Navigator.of(context).pushReplacementNamed('/home');
+  /// Navigate to main screen
+  void _navigateToMain() {
+    Navigator.of(context).pushReplacementNamed('/main');
   }
 
   /// Build the logo and title without container

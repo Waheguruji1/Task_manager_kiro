@@ -37,7 +37,6 @@ class AddTaskDialog extends ConsumerStatefulWidget {
 class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
   
   late bool _isRoutine;
   bool _isLoading = false;
@@ -54,7 +53,6 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
     if (widget.task != null) {
       // Editing existing task
       _titleController.text = widget.task!.title;
-      _descriptionController.text = widget.task!.description ?? '';
       _isRoutine = widget.task!.isRoutine;
     } else {
       // Creating new task
@@ -65,18 +63,12 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   @override
   void dispose() {
     _titleController.dispose();
-    _descriptionController.dispose();
     super.dispose();
   }
 
   /// Validate the task title
   String? _validateTitle(String? value) {
     return ValidationUtils.validateTaskTitle(value);
-  }
-
-  /// Validate the task description
-  String? _validateDescription(String? value) {
-    return ValidationUtils.validateTaskDescription(value);
   }
 
   /// Save the task to the database
@@ -91,8 +83,7 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
     });
 
     try {
-      final title = _titleController.text.trim();
-      final description = _descriptionController.text.trim();
+      final taskText = _titleController.text.trim();
       
       // Get database service from Riverpod provider
       final databaseService = await ref.read(asyncDatabaseServiceProvider.future);
@@ -100,8 +91,8 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
       if (widget.task != null) {
         // Update existing task
         final updatedTask = widget.task!.copyWith(
-          title: title,
-          description: description.isEmpty ? null : description,
+          title: taskText,
+          description: null, // No separate description field
           isRoutine: _isRoutine,
         );
         
@@ -120,8 +111,8 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
       } else {
         // Create new task
         final newTask = Task(
-          title: title,
-          description: description.isEmpty ? null : description,
+          title: taskText,
+          description: null, // No separate description field
           isRoutine: _isRoutine,
           createdAt: DateTime.now(),
         );
@@ -199,25 +190,15 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
               
               const SizedBox(height: AppTheme.spacingL),
               
-              // Task Title Input
+              // Single Task Input (Title + Description)
               CustomTextField(
                 controller: _titleController,
-                labelText: 'Task Title',
-                hintText: 'Enter task title',
+                labelText: 'Task',
+                hintText: 'Enter your task...',
                 validator: _validateTitle,
                 autofocus: true,
-              ),
-              
-              const SizedBox(height: AppTheme.spacingM),
-              
-              // Task Description Input
-              CustomTextField(
-                controller: _descriptionController,
-                labelText: 'Description (Optional)',
-                hintText: 'Enter task description',
                 maxLines: 3,
                 minLines: 1,
-                validator: _validateDescription,
               ),
               
               const SizedBox(height: AppTheme.spacingM),
