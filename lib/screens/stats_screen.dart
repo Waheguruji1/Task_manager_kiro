@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../utils/theme.dart';
-
 import '../utils/responsive.dart';
 import '../providers/providers.dart';
 import '../models/task.dart';
+import '../models/achievement.dart';
+import '../widgets/heatmap_widget.dart';
+import '../widgets/achievement_widget.dart';
 
 /// Stats Screen Widget
 /// 
-/// Displays task statistics and productivity insights
+/// Displays task statistics, productivity insights, heatmaps, and achievements
 class StatsScreen extends ConsumerWidget {
   const StatsScreen({super.key});
 
@@ -83,6 +85,254 @@ class StatsScreen extends ConsumerWidget {
       'completedThisWeek': completedThisWeek,
       'completionRate': completionRate,
     };
+  }
+
+  /// Build completion heatmap tooltip
+  Widget _buildCompletionTooltip(DateTime date, dynamic value) {
+    final count = value as int? ?? 0;
+    final dateStr = '${date.day}/${date.month}/${date.year}';
+    
+    return Text(
+      '$dateStr\n$count tasks completed',
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 12,
+      ),
+      textAlign: TextAlign.center,
+    );
+  }
+
+  /// Build creation vs completion heatmap tooltip
+  Widget _buildCreationCompletionTooltip(DateTime date, dynamic value) {
+    final data = value as Map<String, int>? ?? {'created': 0, 'completed': 0};
+    final created = data['created'] ?? 0;
+    final completed = data['completed'] ?? 0;
+    final dateStr = '${date.day}/${date.month}/${date.year}';
+    
+    return Text(
+      '$dateStr\n$created created, $completed completed',
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 12,
+      ),
+      textAlign: TextAlign.center,
+    );
+  }
+
+  /// Build heatmap section
+  Widget _buildHeatmapSection({
+    required String title,
+    required Widget heatmapWidget,
+    required bool isLoading,
+    String? errorMessage,
+    VoidCallback? onRetry,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppTheme.spacingM,
+        vertical: AppTheme.spacingS,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppTheme.spacingM),
+            child: Text(
+              title,
+              style: AppTheme.headingMedium.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          if (isLoading)
+            Container(
+              height: 200,
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceGrey,
+                borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
+                border: Border.all(color: AppTheme.borderWhite),
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.greyPrimary),
+                ),
+              ),
+            )
+          else if (errorMessage != null)
+            Container(
+              height: 200,
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceGrey,
+                borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
+                border: Border.all(color: AppTheme.borderWhite),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red.shade400,
+                    ),
+                    const SizedBox(height: AppTheme.spacingM),
+                    Text(
+                      errorMessage,
+                      style: AppTheme.bodyMedium.copyWith(
+                        color: AppTheme.secondaryText,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (onRetry != null) ...[
+                      const SizedBox(height: AppTheme.spacingM),
+                      ElevatedButton.icon(
+                        onPressed: onRetry,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.greyPrimary,
+                          foregroundColor: AppTheme.primaryText,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            )
+          else
+            heatmapWidget,
+        ],
+      ),
+    );
+  }
+
+  /// Build achievements section
+  Widget _buildAchievementsSection(List<Achievement> achievements) {
+    if (achievements.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(
+          horizontal: AppTheme.spacingM,
+          vertical: AppTheme.spacingS,
+        ),
+        padding: const EdgeInsets.all(AppTheme.spacingL),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceGrey,
+          borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
+          border: Border.all(color: AppTheme.borderWhite),
+        ),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(
+                Icons.emoji_events_outlined,
+                size: 48,
+                color: AppTheme.secondaryText,
+              ),
+              const SizedBox(height: AppTheme.spacingM),
+              Text(
+                'No achievements yet',
+                style: AppTheme.bodyLarge.copyWith(
+                  color: AppTheme.secondaryText,
+                ),
+              ),
+              const SizedBox(height: AppTheme.spacingS),
+              Text(
+                'Complete tasks to unlock achievements!',
+                style: AppTheme.bodyMedium.copyWith(
+                  color: AppTheme.disabledText,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Separate earned and unearned achievements
+    final earnedAchievements = achievements.where((a) => a.isEarned).toList();
+    final unearnedAchievements = achievements.where((a) => !a.isEarned).toList();
+
+    return Container(
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppTheme.spacingM,
+        vertical: AppTheme.spacingS,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppTheme.spacingM),
+            child: Row(
+              children: [
+                Text(
+                  'Achievements',
+                  style: AppTheme.headingMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: AppTheme.spacingS),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.spacingS,
+                    vertical: AppTheme.spacingXS,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.purplePrimary,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${earnedAchievements.length}/${achievements.length}',
+                    style: AppTheme.caption.copyWith(
+                      color: AppTheme.primaryText,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Earned achievements
+          if (earnedAchievements.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppTheme.spacingS),
+              child: Text(
+                'Earned (${earnedAchievements.length})',
+                style: AppTheme.bodyLarge.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.purplePrimary,
+                ),
+              ),
+            ),
+            ...earnedAchievements.map((achievement) => AchievementWidget(
+              achievement: achievement,
+              isEarned: true,
+            )),
+            const SizedBox(height: AppTheme.spacingM),
+          ],
+          
+          // Unearned achievements
+          if (unearnedAchievements.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppTheme.spacingS),
+              child: Text(
+                'In Progress (${unearnedAchievements.length})',
+                style: AppTheme.bodyLarge.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.secondaryText,
+                ),
+              ),
+            ),
+            ...unearnedAchievements.map((achievement) => AchievementWidget(
+              achievement: achievement,
+              isEarned: false,
+              progress: achievement.progressPercentage,
+            )),
+          ],
+        ],
+      ),
+    );
   }
 
   /// Build stat card
@@ -363,6 +613,184 @@ class StatsScreen extends ConsumerWidget {
                               ),
                             ],
                           ),
+                        ),
+
+                        const SizedBox(height: AppTheme.spacingXL),
+
+                        // Task Completion Activity Heatmap
+                        Consumer(
+                          builder: (context, ref, child) {
+                            final completionHeatmapAsync = ref.watch(completionHeatmapDataProvider);
+                            
+                            return completionHeatmapAsync.when(
+                              data: (heatmapData) => _buildHeatmapSection(
+                                title: 'Task Completion Activity',
+                                heatmapWidget: HeatmapWidget(
+                                  data: heatmapData,
+                                  baseColor: AppTheme.purplePrimary,
+                                  title: 'Daily Task Completions',
+                                  tooltipBuilder: _buildCompletionTooltip,
+                                  onCellTap: (date, value) {
+                                    // Optional: Handle cell tap for detailed view
+                                  },
+                                ),
+                                isLoading: false,
+                              ),
+                              loading: () => _buildHeatmapSection(
+                                title: 'Task Completion Activity',
+                                heatmapWidget: const SizedBox.shrink(),
+                                isLoading: true,
+                              ),
+                              error: (error, _) => _buildHeatmapSection(
+                                title: 'Task Completion Activity',
+                                heatmapWidget: const SizedBox.shrink(),
+                                isLoading: false,
+                                errorMessage: 'Failed to load completion heatmap',
+                                onRetry: () => ref.invalidate(completionHeatmapDataProvider),
+                              ),
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: AppTheme.spacingL),
+
+                        // Task Creation vs Completion Heatmap
+                        Consumer(
+                          builder: (context, ref, child) {
+                            final creationCompletionHeatmapAsync = ref.watch(creationCompletionHeatmapDataProvider);
+                            
+                            return creationCompletionHeatmapAsync.when(
+                              data: (heatmapData) => _buildHeatmapSection(
+                                title: 'Task Creation vs Completion',
+                                heatmapWidget: HeatmapWidget(
+                                  data: heatmapData,
+                                  baseColor: Colors.green,
+                                  title: 'Daily Task Creation & Completion',
+                                  tooltipBuilder: _buildCreationCompletionTooltip,
+                                  isMultiValue: true,
+                                  onCellTap: (date, value) {
+                                    // Optional: Handle cell tap for detailed view
+                                  },
+                                ),
+                                isLoading: false,
+                              ),
+                              loading: () => _buildHeatmapSection(
+                                title: 'Task Creation vs Completion',
+                                heatmapWidget: const SizedBox.shrink(),
+                                isLoading: true,
+                              ),
+                              error: (error, _) => _buildHeatmapSection(
+                                title: 'Task Creation vs Completion',
+                                heatmapWidget: const SizedBox.shrink(),
+                                isLoading: false,
+                                errorMessage: 'Failed to load creation vs completion heatmap',
+                                onRetry: () => ref.invalidate(creationCompletionHeatmapDataProvider),
+                              ),
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: AppTheme.spacingXL),
+
+                        // Achievements Section
+                        Consumer(
+                          builder: (context, ref, child) {
+                            final allAchievementsAsync = ref.watch(allAchievementsProvider);
+                            
+                            return allAchievementsAsync.when(
+                              data: (achievements) => _buildAchievementsSection(achievements),
+                              loading: () => Container(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: AppTheme.spacingM,
+                                  vertical: AppTheme.spacingS,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: AppTheme.spacingM),
+                                      child: Text(
+                                        'Achievements',
+                                        style: AppTheme.headingMedium.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      height: 200,
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.surfaceGrey,
+                                        borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
+                                        border: Border.all(color: AppTheme.borderWhite),
+                                      ),
+                                      child: const Center(
+                                        child: CircularProgressIndicator(
+                                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.greyPrimary),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              error: (error, _) => Container(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: AppTheme.spacingM,
+                                  vertical: AppTheme.spacingS,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: AppTheme.spacingM),
+                                      child: Text(
+                                        'Achievements',
+                                        style: AppTheme.headingMedium.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.all(AppTheme.spacingL),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.surfaceGrey,
+                                        borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
+                                        border: Border.all(color: AppTheme.borderWhite),
+                                      ),
+                                      child: Center(
+                                        child: Column(
+                                          children: [
+                                            Icon(
+                                              Icons.error_outline,
+                                              size: 48,
+                                              color: Colors.red.shade400,
+                                            ),
+                                            const SizedBox(height: AppTheme.spacingM),
+                                            Text(
+                                              'Failed to load achievements',
+                                              style: AppTheme.bodyMedium.copyWith(
+                                                color: AppTheme.secondaryText,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                            const SizedBox(height: AppTheme.spacingM),
+                                            ElevatedButton.icon(
+                                              onPressed: () => ref.invalidate(allAchievementsProvider),
+                                              icon: const Icon(Icons.refresh),
+                                              label: const Text('Retry'),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: AppTheme.greyPrimary,
+                                                foregroundColor: AppTheme.primaryText,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
                         ),
 
                         const SizedBox(height: AppTheme.spacingXL),

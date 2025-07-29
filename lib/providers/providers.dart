@@ -2,7 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/database_service.dart';
 import '../services/preferences_service.dart';
 import '../services/share_service.dart';
+import '../services/stats_service.dart';
+import '../services/achievement_service.dart';
 import '../models/task.dart';
+import '../models/achievement.dart';
 import 'task_state_notifier.dart';
 import 'user_state_notifier.dart';
 
@@ -125,4 +128,60 @@ final userStateNotifierProvider = StateNotifierProvider<UserStateNotifier, UserS
 final asyncUserStateNotifierProvider = FutureProvider<UserStateNotifier>((ref) async {
   final prefsService = await ref.watch(asyncPreferencesServiceProvider.future);
   return UserStateNotifier(prefsService);
+});
+
+/// Stats Service Provider
+/// 
+/// Provides a singleton instance of StatsService
+final statsServiceProvider = Provider<StatsService>((ref) {
+  return StatsService();
+});
+
+/// Achievement Service Provider
+/// 
+/// Provides an asynchronously initialized AchievementService instance
+final achievementServiceProvider = FutureProvider<AchievementService>((ref) async {
+  return await AchievementService.getInstance();
+});
+
+/// All Achievements Provider
+/// 
+/// Provides a list of all achievements from the database
+final allAchievementsProvider = FutureProvider<List<Achievement>>((ref) async {
+  final achievementService = await ref.watch(achievementServiceProvider.future);
+  return await achievementService.getAllAchievements();
+});
+
+/// Earned Achievements Provider
+/// 
+/// Provides a list of earned achievements
+final earnedAchievementsProvider = FutureProvider<List<Achievement>>((ref) async {
+  final achievementService = await ref.watch(achievementServiceProvider.future);
+  return await achievementService.getEarnedAchievements();
+});
+
+/// Unearned Achievements Provider
+/// 
+/// Provides a list of unearned achievements with progress
+final unearnedAchievementsProvider = FutureProvider<List<Achievement>>((ref) async {
+  final achievementService = await ref.watch(achievementServiceProvider.future);
+  return await achievementService.getUnearnedAchievements();
+});
+
+/// Completion Heatmap Data Provider
+/// 
+/// Provides heatmap data for task completion activity
+final completionHeatmapDataProvider = FutureProvider<Map<DateTime, int>>((ref) async {
+  final statsService = ref.watch(statsServiceProvider);
+  final tasks = await ref.watch(allTasksProvider.future);
+  return statsService.calculateCompletionHeatmapData(tasks);
+});
+
+/// Creation vs Completion Heatmap Data Provider
+/// 
+/// Provides heatmap data for task creation vs completion
+final creationCompletionHeatmapDataProvider = FutureProvider<Map<DateTime, Map<String, int>>>((ref) async {
+  final statsService = ref.watch(statsServiceProvider);
+  final tasks = await ref.watch(allTasksProvider.future);
+  return statsService.calculateCreationCompletionHeatmapData(tasks);
 });

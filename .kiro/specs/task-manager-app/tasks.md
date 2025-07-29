@@ -132,7 +132,7 @@
   - Create default achievements initialization in database setup
   - _Requirements: 12_
 
-- [ ] 18. Create Achievement Service for progress tracking
+- [x] 18. Create Achievement Service for progress tracking
   - Create services/achievement_service.dart with singleton pattern
   - Implement achievement progress calculation methods for streaks and daily counts
   - Add methods to check and unlock achievements based on task completion patterns
@@ -141,7 +141,7 @@
   - Add achievement update methods with proper database persistence
   - _Requirements: 12_
 
-- [ ] 19. Create Stats Service for heatmap data calculation
+- [x] 19. Create Stats Service for heatmap data calculation
   - Create services/stats_service.dart with heatmap data generation methods
   - Implement completion heatmap data calculation with daily task completion counts
   - Create creation vs completion heatmap data with both metrics per day
@@ -150,7 +150,7 @@
   - Create monthly and weekly statistics calculation methods
   - _Requirements: 11_
 
-- [ ] 20. Build reusable Heatmap Widget component
+- [x] 20. Build reusable Heatmap Widget component
   - Create widgets/heatmap_widget.dart with configurable color schemes
   - Implement calendar-style grid layout with monthly organization
   - Add interactive tooltip functionality for displaying daily data
@@ -159,7 +159,7 @@
   - Add support for both single value and multi-value data display
   - _Requirements: 11_
 
-- [ ] 21. Create Achievement Widget for displaying achievements
+- [x] 21. Create Achievement Widget for displaying achievements
   - Create widgets/achievement_widget.dart for individual achievement display
   - Implement earned achievement badge with icon and title
   - Add progress indicator for unearned achievements with percentage display
@@ -168,7 +168,7 @@
   - Add proper theme integration with consistent styling
   - _Requirements: 12_
 
-- [ ] 22. Enhance Stats Screen with heatmaps and achievements
+- [x] 22. Enhance Stats Screen with heatmaps and achievements
   - Update lib/screens/stats_screen.dart to include heatmap sections
   - Implement task completion activity heatmap with purple color scheme
   - Add task creation vs completion heatmap with green color scheme
