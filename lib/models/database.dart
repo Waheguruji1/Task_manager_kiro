@@ -41,6 +41,15 @@ class Tasks extends Table {
   
   /// Date for which this task instance is created (for routine task instances)
   DateTimeColumn get taskDate => dateTime().nullable()();
+  
+  /// Priority level of the task - defaults to 0 (none)
+  IntColumn get priority => integer().withDefault(const Constant(0))();
+  
+  /// Scheduled notification time for the task - null if no notification set
+  DateTimeColumn get notificationTime => dateTime().nullable()();
+  
+  /// Unique identifier for the scheduled notification - null if no notification set
+  IntColumn get notificationId => integer().nullable()();
 }
 
 /// Achievements table definition for Drift database
@@ -91,7 +100,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Database schema version for migrations
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   /// Database migration logic and index creation
   @override
@@ -143,6 +152,30 @@ class AppDatabase extends _$AppDatabase {
         await customStatement('''
           CREATE INDEX IF NOT EXISTS idx_tasks_task_date 
           ON tasks (task_date);
+        ''');
+        
+        // Index for priority-based queries
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_tasks_priority 
+          ON tasks (priority);
+        ''');
+        
+        // Index for notification time queries
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_tasks_notification_time 
+          ON tasks (notification_time);
+        ''');
+        
+        // Index for notification ID queries
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_tasks_notification_id 
+          ON tasks (notification_id);
+        ''');
+        
+        // Composite index for priority-based sorting with completion status
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_tasks_priority_completed 
+          ON tasks (priority, is_completed);
         ''');
         
         // Create indexes for achievements table
@@ -211,6 +244,43 @@ class AppDatabase extends _$AppDatabase {
           // Initialize default achievements
           await _initializeDefaultAchievements();
         }
+        
+        if (from < 4) {
+          // Add priority and notification columns to tasks table
+          await customStatement('''
+            ALTER TABLE tasks ADD COLUMN priority INTEGER DEFAULT 0;
+          ''');
+          
+          await customStatement('''
+            ALTER TABLE tasks ADD COLUMN notification_time INTEGER;
+          ''');
+          
+          await customStatement('''
+            ALTER TABLE tasks ADD COLUMN notification_id INTEGER;
+          ''');
+          
+          // Add indexes for new priority and notification columns
+          await customStatement('''
+            CREATE INDEX IF NOT EXISTS idx_tasks_priority 
+            ON tasks (priority);
+          ''');
+          
+          await customStatement('''
+            CREATE INDEX IF NOT EXISTS idx_tasks_notification_time 
+            ON tasks (notification_time);
+          ''');
+          
+          await customStatement('''
+            CREATE INDEX IF NOT EXISTS idx_tasks_notification_id 
+            ON tasks (notification_id);
+          ''');
+          
+          // Composite index for priority-based sorting with completion status
+          await customStatement('''
+            CREATE INDEX IF NOT EXISTS idx_tasks_priority_completed 
+            ON tasks (priority, is_completed);
+          ''');
+        }
       },
     );
   }
@@ -236,6 +306,64 @@ class AppDatabase extends _$AppDatabase {
       ..orderBy([
         (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)
       ])).get();
+  }
+
+  /// Retrieves all everyday (non-routine) tasks sorted by priority
+  /// 
+  /// Returns tasks that are not marked as routine, ordered by priority (High → Medium → None) then by creation date
+  Future<List<TaskData>> getEverydayTasksSortedByPriority() {
+    return (select(tasks)
+      ..where((t) => t.isRoutine.equals(false))
+      ..orderBy([
+        (t) => OrderingTerm(expression: t.priority, mode: OrderingMode.desc), // Higher priority values first
+        (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)
+      ])).get();
+  }
+
+  /// Retrieves tasks by priority level
+  /// 
+  /// [priority] The priority level to filter by (0 = none, 1 = medium, 2 = high)
+  /// Returns tasks with the specified priority level
+  Future<List<TaskData>> getTasksByPriority(int priority) {
+    return (select(tasks)
+      ..where((t) => t.priority.equals(priority))
+      ..orderBy([
+        (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)
+      ])).get();
+  }
+
+  /// Retrieves tasks with scheduled notifications
+  /// 
+  /// Returns tasks that have notification times set, ordered by notification time
+  Future<List<TaskData>> getTasksWithNotifications() {
+    return (select(tasks)
+      ..where((t) => t.notificationTime.isNotNull())
+      ..orderBy([
+        (t) => OrderingTerm(expression: t.notificationTime, mode: OrderingMode.asc)
+      ])).get();
+  }
+
+  /// Retrieves tasks with notifications scheduled for a specific date
+  /// 
+  /// [date] The date to filter notifications by
+  /// Returns tasks with notifications scheduled for the specified date
+  Future<List<TaskData>> getTasksWithNotificationsForDate(DateTime date) {
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+    
+    return (select(tasks)
+      ..where((t) => t.notificationTime.isBetweenValues(startOfDay, endOfDay))
+      ..orderBy([
+        (t) => OrderingTerm(expression: t.notificationTime, mode: OrderingMode.asc)
+      ])).get();
+  }
+
+  /// Retrieves a task by its notification ID
+  /// 
+  /// [notificationId] The notification ID to search for
+  /// Returns the task with the specified notification ID, or null if not found
+  Future<TaskData?> getTaskByNotificationId(int notificationId) {
+    return (select(tasks)..where((t) => t.notificationId.equals(notificationId))).getSingleOrNull();
   }
 
   /// Retrieves all routine tasks

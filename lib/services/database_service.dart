@@ -55,6 +55,9 @@ class DatabaseService {
         completedAt: Value(task.completedAt),
         routineTaskId: Value(task.routineTaskId),
         taskDate: Value(task.taskDate),
+        priority: Value(task.priority.index),
+        notificationTime: Value(task.notificationTime),
+        notificationId: Value(task.notificationId),
       );
       
       return await _database!.into(_database!.tasks).insert(companion);
@@ -160,6 +163,9 @@ class DatabaseService {
         completedAt: Value(task.completedAt),
         routineTaskId: Value(task.routineTaskId),
         taskDate: Value(task.taskDate),
+        priority: Value(task.priority.index),
+        notificationTime: Value(task.notificationTime),
+        notificationId: Value(task.notificationId),
       );
       
       final updatedRows = await (_database!.update(_database!.tasks)
@@ -316,6 +322,9 @@ class DatabaseService {
             completedAt: const Value(null),
             routineTaskId: Value(routineTask.id),
             taskDate: Value(todayStart),
+            priority: Value(routineTask.priority), // Inherit priority from routine task
+            notificationTime: Value(routineTask.notificationTime), // Inherit notification settings
+            notificationId: Value(routineTask.notificationId),
           );
           
           await _database!.into(_database!.tasks).insert(instanceCompanion);
@@ -393,6 +402,163 @@ class DatabaseService {
     } catch (e) {
       ErrorHandler.logError(e, context: 'Get today\'s routine tasks', type: ErrorType.database);
       return [];
+    }
+  }
+
+  // ==================== PRIORITY-BASED OPERATIONS ====================
+
+  /// Get everyday tasks sorted by priority
+  Future<List<Task>> getEverydayTasksSortedByPriority() async {
+    try {
+      final taskDataList = await _database!.getEverydayTasksSortedByPriority();
+      return taskDataList.map((taskData) => _taskDataToTask(taskData)).toList();
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Get everyday tasks sorted by priority', type: ErrorType.database);
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Get everyday tasks sorted by priority'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
+
+  /// Get tasks by priority level
+  Future<List<Task>> getTasksByPriority(TaskPriority priority) async {
+    try {
+      final taskDataList = await _database!.getTasksByPriority(priority.index);
+      return taskDataList.map((taskData) => _taskDataToTask(taskData)).toList();
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Get tasks by priority', type: ErrorType.database);
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Get tasks by priority'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
+
+  // ==================== NOTIFICATION-BASED OPERATIONS ====================
+
+  /// Get tasks with scheduled notifications
+  Future<List<Task>> getTasksWithNotifications() async {
+    try {
+      final taskDataList = await _database!.getTasksWithNotifications();
+      return taskDataList.map((taskData) => _taskDataToTask(taskData)).toList();
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Get tasks with notifications', type: ErrorType.database);
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Get tasks with notifications'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
+
+  /// Get tasks with notifications scheduled for a specific date
+  Future<List<Task>> getTasksWithNotificationsForDate(DateTime date) async {
+    try {
+      final taskDataList = await _database!.getTasksWithNotificationsForDate(date);
+      return taskDataList.map((taskData) => _taskDataToTask(taskData)).toList();
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Get tasks with notifications for date', type: ErrorType.database);
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Get tasks with notifications for date'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
+
+  /// Get task by notification ID
+  Future<Task?> getTaskByNotificationId(int notificationId) async {
+    try {
+      if (notificationId <= 0) {
+        throw AppException(
+          message: 'Invalid notification ID',
+          type: ErrorType.validation,
+        );
+      }
+
+      final taskData = await _database!.getTaskByNotificationId(notificationId);
+      if (taskData == null) return null;
+      return _taskDataToTask(taskData);
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Get task by notification ID', type: ErrorType.database);
+      if (e is AppException) {
+        rethrow;
+      }
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Get task by notification ID'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
+
+  /// Update task notification settings
+  Future<bool> updateTaskNotification(int taskId, DateTime? notificationTime, int? notificationId) async {
+    try {
+      if (taskId <= 0) {
+        throw AppException(
+          message: 'Invalid task ID for notification update',
+          type: ErrorType.validation,
+        );
+      }
+
+      final companion = TasksCompanion(
+        id: Value(taskId),
+        notificationTime: Value(notificationTime),
+        notificationId: Value(notificationId),
+      );
+
+      final updatedRows = await (_database!.update(_database!.tasks)
+            ..where((t) => t.id.equals(taskId)))
+          .write(companion);
+
+      return updatedRows > 0;
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Update task notification', type: ErrorType.database);
+      if (e is AppException) {
+        rethrow;
+      }
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Update task notification'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
+
+  /// Update task priority
+  Future<bool> updateTaskPriority(int taskId, TaskPriority priority) async {
+    try {
+      if (taskId <= 0) {
+        throw AppException(
+          message: 'Invalid task ID for priority update',
+          type: ErrorType.validation,
+        );
+      }
+
+      final companion = TasksCompanion(
+        id: Value(taskId),
+        priority: Value(priority.index),
+      );
+
+      final updatedRows = await (_database!.update(_database!.tasks)
+            ..where((t) => t.id.equals(taskId)))
+          .write(companion);
+
+      return updatedRows > 0;
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Update task priority', type: ErrorType.database);
+      if (e is AppException) {
+        rethrow;
+      }
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Update task priority'),
+        type: ErrorType.database,
+        originalError: e,
+      );
     }
   }
   
@@ -592,6 +758,9 @@ class DatabaseService {
       completedAt: taskData.completedAt,
       routineTaskId: taskData.routineTaskId,
       taskDate: taskData.taskDate,
+      priority: TaskPriority.values[taskData.priority],
+      notificationTime: taskData.notificationTime,
+      notificationId: taskData.notificationId,
     );
   }
   

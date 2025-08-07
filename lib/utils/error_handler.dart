@@ -4,7 +4,7 @@ import 'constants.dart';
 import 'theme.dart';
 
 /// Error types that can occur in the app
-enum ErrorType { database, preferences, validation, network, unknown }
+enum ErrorType { database, preferences, validation, network, notification, unknown }
 
 /// Custom exception class for app-specific errors
 class AppException implements Exception {
@@ -49,6 +49,23 @@ class ErrorHandler {
       // In production, you would send to crash reporting service
       // For now, we'll just use debugPrint which is stripped in release
       debugPrint('ERROR: $errorMessage');
+    }
+  }
+
+  /// Log info message for debugging and monitoring
+  static void logInfo(
+    String message, {
+    String? context,
+  }) {
+    final infoMessage = context != null ? '[$context] $message' : message;
+
+    if (kDebugMode) {
+      // In debug mode, print to console
+      print('INFO: $infoMessage');
+    } else {
+      // In production, you would send to analytics service
+      // For now, we'll just use debugPrint which is stripped in release
+      debugPrint('INFO: $infoMessage');
     }
   }
 
@@ -128,6 +145,32 @@ class ErrorHandler {
     }
 
     return AppStrings.errorValidation;
+  }
+
+  /// Handle notification errors and return user-friendly message
+  static String handleNotificationError(dynamic error, {String? context}) {
+    logError(
+      error,
+      context: context ?? 'Notification',
+      type: ErrorType.notification,
+    );
+
+    if (error is AppException) {
+      return error.message;
+    }
+
+    // Map common notification errors to user-friendly messages
+    final errorString = error.toString().toLowerCase();
+
+    if (errorString.contains('permission')) {
+      return 'Notification permissions are required for task reminders';
+    } else if (errorString.contains('schedule')) {
+      return 'Failed to schedule notification reminder';
+    } else if (errorString.contains('cancel')) {
+      return 'Failed to cancel notification reminder';
+    } else {
+      return 'Notification service error occurred';
+    }
   }
 
   /// Handle unknown errors

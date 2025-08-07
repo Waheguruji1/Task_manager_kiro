@@ -170,6 +170,10 @@ class _AppInitializerState extends ConsumerState<AppInitializer> with WidgetsBin
       await ref.read(asyncDatabaseServiceProvider.future);
       await ref.read(asyncPreferencesServiceProvider.future);
       
+      // Perform automatic cleanup of old completed tasks in the background
+      // This runs asynchronously and doesn't block app initialization
+      _performBackgroundCleanup();
+      
       // Check if user has already entered their name using provider
       final hasUserName = await ref.read(hasUserNameProvider.future);
       
@@ -200,6 +204,45 @@ class _AppInitializerState extends ConsumerState<AppInitializer> with WidgetsBin
         }
       }
     }
+  }
+
+  /// Perform background cleanup of old completed tasks
+  /// 
+  /// This method runs asynchronously during app startup to clean up
+  /// old completed everyday tasks without blocking the user interface.
+  void _performBackgroundCleanup() {
+    // Run cleanup in background without awaiting to avoid blocking UI
+    Future.microtask(() async {
+      try {
+        ErrorHandler.logInfo(
+          'Starting background task cleanup process',
+          context: 'App initialization',
+        );
+        
+        // Trigger cleanup using the provider
+        final cleanupResult = await ref.read(performCleanupProvider.future);
+        
+        if (cleanupResult) {
+          ErrorHandler.logInfo(
+            'Background task cleanup completed successfully',
+            context: 'App initialization',
+          );
+        } else {
+          ErrorHandler.logError(
+            'Background task cleanup failed',
+            context: 'App initialization cleanup',
+            type: ErrorType.database,
+          );
+        }
+      } catch (e) {
+        // Log cleanup errors but don't let them affect app initialization
+        ErrorHandler.logError(
+          e,
+          context: 'Background task cleanup',
+          type: ErrorType.database,
+        );
+      }
+    });
   }
 
   /// Show error screen when initialization completely fails

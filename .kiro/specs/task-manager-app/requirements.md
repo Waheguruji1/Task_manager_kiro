@@ -185,6 +185,91 @@ This document outlines the requirements for a personalized task manager Flutter 
 
 ### Requirement 13
 
+**User Story:** As a user, I want to set priority levels for my everyday tasks with subtle visual distinction, so that I can focus on important tasks without visual clutter.
+
+#### Acceptance Criteria
+
+1. WHEN creating or editing an everyday task THEN the system SHALL provide priority options: High, Medium, or No Priority
+2. WHEN the priority dropdown is displayed THEN the system SHALL open upward to save screen space
+3. WHEN a task has High priority THEN the system SHALL display it with a purple tile background
+4. WHEN a task has Medium priority THEN the system SHALL display it with a green tile background
+5. WHEN a task has No Priority THEN the system SHALL display it with the current default styling
+6. WHEN displaying everyday tasks THEN the system SHALL automatically sort them by priority (High → Medium → No Priority)
+7. WHEN routine tasks are created or edited THEN the system SHALL NOT show priority options as they are always low priority
+8. WHEN priority colors are applied THEN the system SHALL maintain subtle visual treatment without overwhelming the interface
+9. WHEN priority is set THEN the system SHALL persist the priority level in the database
+10. WHEN the priority system is implemented THEN the system SHALL ensure color accessibility and theme consistency
+
+### Requirement 14
+
+**User Story:** As a user, I want to set notification reminders for my everyday tasks, so that I don't forget important tasks without being overwhelmed by notifications.
+
+#### Acceptance Criteria
+
+1. WHEN creating or editing an everyday task THEN the system SHALL provide notification time options: 1hr, 2hr, or custom time
+2. WHEN the notification dropdown is displayed THEN the system SHALL open upward to save screen space
+3. WHEN a custom notification time is selected THEN the system SHALL allow the user to set a specific time
+4. WHEN a notification time is set THEN the system SHALL schedule a local notification for that task
+5. WHEN routine tasks are created or edited THEN the system SHALL NOT show notification options
+6. WHEN the app is installed THEN the system SHALL request notification permissions from the user
+7. WHEN a notification is triggered THEN the system SHALL display task details and allow quick completion
+8. WHEN notification settings are changed THEN the system SHALL update or cancel existing scheduled notifications
+9. WHEN notifications are set THEN the system SHALL persist notification preferences in the database
+10. WHEN the user completes a task THEN the system SHALL automatically cancel any pending notifications for that task
+
+### Requirement 15
+
+**User Story:** As a user, I want a settings page to manage my notification preferences, so that I can control when and how I receive task reminders.
+
+#### Acceptance Criteria
+
+1. WHEN the settings screen is accessed THEN the system SHALL display notification management options
+2. WHEN notification settings are displayed THEN the system SHALL show a toggle to enable/disable all notifications
+3. WHEN notifications are disabled globally THEN the system SHALL cancel all scheduled notifications
+4. WHEN notifications are re-enabled THEN the system SHALL reschedule notifications for tasks with notification times set
+5. WHEN notification settings are changed THEN the system SHALL save preferences using SharedPreferences
+6. WHEN the settings screen is displayed THEN the system SHALL show current notification permission status
+7. WHEN notification permissions are denied THEN the system SHALL provide guidance to enable them in device settings
+8. WHEN settings are updated THEN the system SHALL apply changes immediately without requiring app restart
+9. WHEN the settings screen is accessed THEN the system SHALL maintain consistent theme and styling
+10. WHEN notification preferences are saved THEN the system SHALL provide user feedback confirming the changes
+
+### Requirement 16
+
+**User Story:** As a user, I want long task titles and content to be properly truncated, so that the interface remains clean and readable without text overflow.
+
+#### Acceptance Criteria
+
+1. WHEN task titles exceed the available space THEN the system SHALL truncate them with ellipsis (...)
+2. WHEN task descriptions are displayed THEN the system SHALL limit them to a maximum number of lines with truncation
+3. WHEN text is truncated THEN the system SHALL allow users to tap to view the full content
+4. WHEN truncation is applied THEN the system SHALL maintain consistent spacing and alignment
+5. WHEN task containers are rendered THEN the system SHALL ensure text doesn't break the layout
+6. WHEN truncated text is displayed THEN the system SHALL maintain readability and accessibility
+7. WHEN text truncation is implemented THEN the system SHALL apply it consistently across all task displays
+8. WHEN long content is shown THEN the system SHALL provide smooth transitions between truncated and full views
+9. WHEN text is truncated THEN the system SHALL ensure important information remains visible
+10. WHEN truncation is applied THEN the system SHALL maintain the app's visual hierarchy and theme
+
+### Requirement 17
+
+**User Story:** As a user, I want my completed everyday tasks to be automatically cleaned up after 2 months, so that my task list stays manageable and the app performs well.
+
+#### Acceptance Criteria
+
+1. WHEN everyday tasks are completed THEN the system SHALL track their completion date for cleanup purposes
+2. WHEN the app performs maintenance THEN the system SHALL identify completed everyday tasks older than 2 months
+3. WHEN old completed tasks are found THEN the system SHALL automatically delete them from the database
+4. WHEN routine tasks are completed THEN the system SHALL NOT include them in the auto-deletion process
+5. WHEN auto-deletion runs THEN the system SHALL preserve task statistics and achievement data
+6. WHEN tasks are auto-deleted THEN the system SHALL update any related heatmap and stats data accordingly
+7. WHEN the cleanup process runs THEN the system SHALL do so in the background without affecting user experience
+8. WHEN auto-deletion is performed THEN the system SHALL log the cleanup activity for debugging purposes
+9. WHEN the app starts THEN the system SHALL check if cleanup is needed and perform it if necessary
+10. WHEN tasks are auto-deleted THEN the system SHALL ensure database integrity and proper cleanup of related data
+
+### Requirement 18
+
 **User Story:** As a developer, I want the option to implement an intro slider later with explicit permission, so that I can add onboarding features when appropriate without disrupting the current development flow.
 
 #### Acceptance Criteria

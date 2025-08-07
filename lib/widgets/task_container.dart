@@ -72,7 +72,7 @@ class TaskContainer extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: AppTheme.borderWhite,
+            color: AppTheme.borderWhite.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -80,15 +80,22 @@ class TaskContainer extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Date display
-          Text(
-            _formatDate(date),
-            style: AppTheme.headingMedium.copyWith(
-              color: AppTheme.primaryText,
+          // Date display with enhanced typography
+          Expanded(
+            child: Text(
+              _formatDate(date),
+              style: AppTheme.headingMedium.copyWith(
+                color: AppTheme.primaryText,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           
-          // Add task button
+          const SizedBox(width: AppTheme.spacingM),
+          
+          // Add task button with enhanced visual feedback
           Material(
             color: Colors.transparent,
             child: InkWell(
@@ -98,11 +105,25 @@ class TaskContainer extends StatelessWidget {
               highlightColor: AppTheme.greyPrimary.withValues(alpha: 0.1),
               child: Container(
                 padding: const EdgeInsets.all(AppTheme.spacingS + 2),
-                decoration: AppTheme.plusIconDecoration,
+                decoration: BoxDecoration(
+                  color: AppTheme.greyPrimary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppTheme.borderWhite.withValues(alpha: 0.4),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.greyPrimary.withValues(alpha: 0.1),
+                      offset: const Offset(0, 2),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
                 child: const Icon(
                   Icons.add,
                   size: 20,
-                  color: AppTheme.primaryText,
+                  color: AppTheme.greyPrimary,
                 ),
               ),
             ),
@@ -118,6 +139,9 @@ class TaskContainer extends StatelessWidget {
       return _buildEmptyState();
     }
 
+    // Sort tasks by priority (High → Medium → No Priority)
+    final sortedTasks = Task.sortByPriority(tasks);
+
     final containerHeight = ResponsiveUtils.getTaskContainerHeight(context);
     final responsiveSpacing = ResponsiveUtils.getSpacing(context, AppTheme.spacingM);
 
@@ -132,14 +156,14 @@ class TaskContainer extends StatelessWidget {
           responsiveSpacing,
           responsiveSpacing,
         ),
-        itemCount: tasks.length + 1, // +1 for bottom spacing
+        itemCount: sortedTasks.length + 1, // +1 for bottom spacing
         itemBuilder: (context, index) {
           // Add extra spacing at the bottom for better scrolling experience
-          if (index == tasks.length) {
+          if (index == sortedTasks.length) {
             return const SizedBox(height: AppTheme.spacingS);
           }
           
-          final task = tasks[index];
+          final task = sortedTasks[index];
           return TaskItem(
             key: ValueKey(task.id ?? task.hashCode), // Provide unique key for performance
             task: task,

@@ -4,6 +4,8 @@ import '../services/preferences_service.dart';
 import '../services/share_service.dart';
 import '../services/stats_service.dart';
 import '../services/achievement_service.dart';
+import '../services/notification_service.dart';
+import '../services/task_cleanup_service.dart';
 import '../models/task.dart';
 import '../models/achievement.dart';
 import 'task_state_notifier.dart';
@@ -79,17 +81,21 @@ final allTasksProvider = FutureProvider<List<Task>>((ref) async {
 /// Everyday Tasks Provider
 /// 
 /// Provides a list of everyday tasks (includes regular tasks and daily routine instances)
+/// Tasks are automatically sorted by priority (High → Medium → No Priority)
 final everydayTasksProvider = FutureProvider<List<Task>>((ref) async {
   final dbService = await ref.watch(asyncDatabaseServiceProvider.future);
-  return await dbService.getEverydayTasks();
+  final tasks = await dbService.getEverydayTasks();
+  return Task.sortByPriority(tasks);
 });
 
 /// Routine Tasks Provider
 /// 
 /// Provides a list of routine tasks
+/// Tasks are automatically sorted by priority (High → Medium → No Priority)
 final routineTasksProvider = FutureProvider<List<Task>>((ref) async {
   final dbService = await ref.watch(asyncDatabaseServiceProvider.future);
-  return await dbService.getRoutineTasks();
+  final tasks = await dbService.getRoutineTasks();
+  return Task.sortByPriority(tasks);
 });
 
 /// Task by ID Provider
@@ -112,7 +118,9 @@ final taskStateNotifierProvider = StateNotifierProvider<TaskStateNotifier, TaskS
 /// Provides an asynchronously initialized TaskStateNotifier
 final asyncTaskStateNotifierProvider = FutureProvider<TaskStateNotifier>((ref) async {
   final dbService = await ref.watch(asyncDatabaseServiceProvider.future);
-  return TaskStateNotifier(dbService);
+  final achievementService = await ref.watch(achievementServiceProvider.future);
+  final notificationService = ref.watch(notificationServiceProvider);
+  return TaskStateNotifier(dbService, achievementService, notificationService);
 });
 
 /// User State Notifier Provider
@@ -184,4 +192,52 @@ final creationCompletionHeatmapDataProvider = FutureProvider<Map<DateTime, Map<S
   final statsService = ref.watch(statsServiceProvider);
   final tasks = await ref.watch(allTasksProvider.future);
   return statsService.calculateCreationCompletionHeatmapData(tasks);
+});
+
+/// Notification Service Provider
+/// 
+/// Provides a singleton instance of NotificationService
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  return NotificationService();
+});
+
+/// Notifications Enabled Provider
+/// 
+/// Provides the current notification enabled status from SharedPreferences
+final notificationsEnabledProvider = FutureProvider<bool>((ref) async {
+  final prefsService = await ref.watch(asyncPreferencesServiceProvider.future);
+  return await prefsService.areNotificationsEnabled();
+});
+
+/// Notification Permission Status Provider
+/// 
+/// Provides the current notification permission status from the system
+final notificationPermissionStatusProvider = FutureProvider<bool>((ref) async {
+  final notificationService = ref.watch(notificationServiceProvider);
+  return await notificationService.areNotificationsEnabled();
+});
+
+/// Task Cleanup Service Provider
+/// 
+/// Provides a singleton instance of TaskCleanupService
+final taskCleanupServiceProvider = Provider<TaskCleanupService>((ref) {
+  return TaskCleanupService();
+});
+
+/// Cleanup Statistics Provider
+/// 
+/// Provides cleanup statistics for monitoring purposes
+final cleanupStatisticsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final cleanupService = ref.watch(taskCleanupServiceProvider);
+  final tasks = await ref.watch(allTasksProvider.future);
+  return cleanupService.getCleanupStatistics(tasks);
+});
+
+/// Perform Cleanup Provider
+/// 
+/// Performs automatic cleanup of old completed tasks
+final performCleanupProvider = FutureProvider<bool>((ref) async {
+  final cleanupService = ref.watch(taskCleanupServiceProvider);
+  final dbService = await ref.watch(asyncDatabaseServiceProvider.future);
+  return await cleanupService.performCleanupIfNeeded(dbService);
 });

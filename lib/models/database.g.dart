@@ -75,6 +75,26 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, TaskData> {
   late final GeneratedColumn<DateTime> taskDate = GeneratedColumn<DateTime>(
       'task_date', aliasedName, true,
       type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _priorityMeta =
+      const VerificationMeta('priority');
+  @override
+  late final GeneratedColumn<int> priority = GeneratedColumn<int>(
+      'priority', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _notificationTimeMeta =
+      const VerificationMeta('notificationTime');
+  @override
+  late final GeneratedColumn<DateTime> notificationTime =
+      GeneratedColumn<DateTime>('notification_time', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _notificationIdMeta =
+      const VerificationMeta('notificationId');
+  @override
+  late final GeneratedColumn<int> notificationId = GeneratedColumn<int>(
+      'notification_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -85,7 +105,10 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, TaskData> {
         createdAt,
         completedAt,
         routineTaskId,
-        taskDate
+        taskDate,
+        priority,
+        notificationTime,
+        notificationId
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -144,6 +167,22 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, TaskData> {
       context.handle(_taskDateMeta,
           taskDate.isAcceptableOrUnknown(data['task_date']!, _taskDateMeta));
     }
+    if (data.containsKey('priority')) {
+      context.handle(_priorityMeta,
+          priority.isAcceptableOrUnknown(data['priority']!, _priorityMeta));
+    }
+    if (data.containsKey('notification_time')) {
+      context.handle(
+          _notificationTimeMeta,
+          notificationTime.isAcceptableOrUnknown(
+              data['notification_time']!, _notificationTimeMeta));
+    }
+    if (data.containsKey('notification_id')) {
+      context.handle(
+          _notificationIdMeta,
+          notificationId.isAcceptableOrUnknown(
+              data['notification_id']!, _notificationIdMeta));
+    }
     return context;
   }
 
@@ -171,6 +210,12 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, TaskData> {
           .read(DriftSqlType.int, data['${effectivePrefix}routine_task_id']),
       taskDate: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}task_date']),
+      priority: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}priority'])!,
+      notificationTime: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}notification_time']),
+      notificationId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}notification_id']),
     );
   }
 
@@ -207,6 +252,15 @@ class TaskData extends DataClass implements Insertable<TaskData> {
 
   /// Date for which this task instance is created (for routine task instances)
   final DateTime? taskDate;
+
+  /// Priority level of the task - defaults to 0 (none)
+  final int priority;
+
+  /// Scheduled notification time for the task - null if no notification set
+  final DateTime? notificationTime;
+
+  /// Unique identifier for the scheduled notification - null if no notification set
+  final int? notificationId;
   const TaskData(
       {required this.id,
       required this.title,
@@ -216,7 +270,10 @@ class TaskData extends DataClass implements Insertable<TaskData> {
       required this.createdAt,
       this.completedAt,
       this.routineTaskId,
-      this.taskDate});
+      this.taskDate,
+      required this.priority,
+      this.notificationTime,
+      this.notificationId});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -236,6 +293,13 @@ class TaskData extends DataClass implements Insertable<TaskData> {
     }
     if (!nullToAbsent || taskDate != null) {
       map['task_date'] = Variable<DateTime>(taskDate);
+    }
+    map['priority'] = Variable<int>(priority);
+    if (!nullToAbsent || notificationTime != null) {
+      map['notification_time'] = Variable<DateTime>(notificationTime);
+    }
+    if (!nullToAbsent || notificationId != null) {
+      map['notification_id'] = Variable<int>(notificationId);
     }
     return map;
   }
@@ -259,6 +323,13 @@ class TaskData extends DataClass implements Insertable<TaskData> {
       taskDate: taskDate == null && nullToAbsent
           ? const Value.absent()
           : Value(taskDate),
+      priority: Value(priority),
+      notificationTime: notificationTime == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notificationTime),
+      notificationId: notificationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notificationId),
     );
   }
 
@@ -275,6 +346,10 @@ class TaskData extends DataClass implements Insertable<TaskData> {
       completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
       routineTaskId: serializer.fromJson<int?>(json['routineTaskId']),
       taskDate: serializer.fromJson<DateTime?>(json['taskDate']),
+      priority: serializer.fromJson<int>(json['priority']),
+      notificationTime:
+          serializer.fromJson<DateTime?>(json['notificationTime']),
+      notificationId: serializer.fromJson<int?>(json['notificationId']),
     );
   }
   @override
@@ -290,6 +365,9 @@ class TaskData extends DataClass implements Insertable<TaskData> {
       'completedAt': serializer.toJson<DateTime?>(completedAt),
       'routineTaskId': serializer.toJson<int?>(routineTaskId),
       'taskDate': serializer.toJson<DateTime?>(taskDate),
+      'priority': serializer.toJson<int>(priority),
+      'notificationTime': serializer.toJson<DateTime?>(notificationTime),
+      'notificationId': serializer.toJson<int?>(notificationId),
     };
   }
 
@@ -302,7 +380,10 @@ class TaskData extends DataClass implements Insertable<TaskData> {
           DateTime? createdAt,
           Value<DateTime?> completedAt = const Value.absent(),
           Value<int?> routineTaskId = const Value.absent(),
-          Value<DateTime?> taskDate = const Value.absent()}) =>
+          Value<DateTime?> taskDate = const Value.absent(),
+          int? priority,
+          Value<DateTime?> notificationTime = const Value.absent(),
+          Value<int?> notificationId = const Value.absent()}) =>
       TaskData(
         id: id ?? this.id,
         title: title ?? this.title,
@@ -314,6 +395,12 @@ class TaskData extends DataClass implements Insertable<TaskData> {
         routineTaskId:
             routineTaskId.present ? routineTaskId.value : this.routineTaskId,
         taskDate: taskDate.present ? taskDate.value : this.taskDate,
+        priority: priority ?? this.priority,
+        notificationTime: notificationTime.present
+            ? notificationTime.value
+            : this.notificationTime,
+        notificationId:
+            notificationId.present ? notificationId.value : this.notificationId,
       );
   TaskData copyWithCompanion(TasksCompanion data) {
     return TaskData(
@@ -331,6 +418,13 @@ class TaskData extends DataClass implements Insertable<TaskData> {
           ? data.routineTaskId.value
           : this.routineTaskId,
       taskDate: data.taskDate.present ? data.taskDate.value : this.taskDate,
+      priority: data.priority.present ? data.priority.value : this.priority,
+      notificationTime: data.notificationTime.present
+          ? data.notificationTime.value
+          : this.notificationTime,
+      notificationId: data.notificationId.present
+          ? data.notificationId.value
+          : this.notificationId,
     );
   }
 
@@ -345,14 +439,28 @@ class TaskData extends DataClass implements Insertable<TaskData> {
           ..write('createdAt: $createdAt, ')
           ..write('completedAt: $completedAt, ')
           ..write('routineTaskId: $routineTaskId, ')
-          ..write('taskDate: $taskDate')
+          ..write('taskDate: $taskDate, ')
+          ..write('priority: $priority, ')
+          ..write('notificationTime: $notificationTime, ')
+          ..write('notificationId: $notificationId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, title, description, isCompleted,
-      isRoutine, createdAt, completedAt, routineTaskId, taskDate);
+  int get hashCode => Object.hash(
+      id,
+      title,
+      description,
+      isCompleted,
+      isRoutine,
+      createdAt,
+      completedAt,
+      routineTaskId,
+      taskDate,
+      priority,
+      notificationTime,
+      notificationId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -365,7 +473,10 @@ class TaskData extends DataClass implements Insertable<TaskData> {
           other.createdAt == this.createdAt &&
           other.completedAt == this.completedAt &&
           other.routineTaskId == this.routineTaskId &&
-          other.taskDate == this.taskDate);
+          other.taskDate == this.taskDate &&
+          other.priority == this.priority &&
+          other.notificationTime == this.notificationTime &&
+          other.notificationId == this.notificationId);
 }
 
 class TasksCompanion extends UpdateCompanion<TaskData> {
@@ -378,6 +489,9 @@ class TasksCompanion extends UpdateCompanion<TaskData> {
   final Value<DateTime?> completedAt;
   final Value<int?> routineTaskId;
   final Value<DateTime?> taskDate;
+  final Value<int> priority;
+  final Value<DateTime?> notificationTime;
+  final Value<int?> notificationId;
   const TasksCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -388,6 +502,9 @@ class TasksCompanion extends UpdateCompanion<TaskData> {
     this.completedAt = const Value.absent(),
     this.routineTaskId = const Value.absent(),
     this.taskDate = const Value.absent(),
+    this.priority = const Value.absent(),
+    this.notificationTime = const Value.absent(),
+    this.notificationId = const Value.absent(),
   });
   TasksCompanion.insert({
     this.id = const Value.absent(),
@@ -399,6 +516,9 @@ class TasksCompanion extends UpdateCompanion<TaskData> {
     this.completedAt = const Value.absent(),
     this.routineTaskId = const Value.absent(),
     this.taskDate = const Value.absent(),
+    this.priority = const Value.absent(),
+    this.notificationTime = const Value.absent(),
+    this.notificationId = const Value.absent(),
   })  : title = Value(title),
         createdAt = Value(createdAt);
   static Insertable<TaskData> custom({
@@ -411,6 +531,9 @@ class TasksCompanion extends UpdateCompanion<TaskData> {
     Expression<DateTime>? completedAt,
     Expression<int>? routineTaskId,
     Expression<DateTime>? taskDate,
+    Expression<int>? priority,
+    Expression<DateTime>? notificationTime,
+    Expression<int>? notificationId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -422,6 +545,9 @@ class TasksCompanion extends UpdateCompanion<TaskData> {
       if (completedAt != null) 'completed_at': completedAt,
       if (routineTaskId != null) 'routine_task_id': routineTaskId,
       if (taskDate != null) 'task_date': taskDate,
+      if (priority != null) 'priority': priority,
+      if (notificationTime != null) 'notification_time': notificationTime,
+      if (notificationId != null) 'notification_id': notificationId,
     });
   }
 
@@ -434,7 +560,10 @@ class TasksCompanion extends UpdateCompanion<TaskData> {
       Value<DateTime>? createdAt,
       Value<DateTime?>? completedAt,
       Value<int?>? routineTaskId,
-      Value<DateTime?>? taskDate}) {
+      Value<DateTime?>? taskDate,
+      Value<int>? priority,
+      Value<DateTime?>? notificationTime,
+      Value<int?>? notificationId}) {
     return TasksCompanion(
       id: id ?? this.id,
       title: title ?? this.title,
@@ -445,6 +574,9 @@ class TasksCompanion extends UpdateCompanion<TaskData> {
       completedAt: completedAt ?? this.completedAt,
       routineTaskId: routineTaskId ?? this.routineTaskId,
       taskDate: taskDate ?? this.taskDate,
+      priority: priority ?? this.priority,
+      notificationTime: notificationTime ?? this.notificationTime,
+      notificationId: notificationId ?? this.notificationId,
     );
   }
 
@@ -478,6 +610,15 @@ class TasksCompanion extends UpdateCompanion<TaskData> {
     if (taskDate.present) {
       map['task_date'] = Variable<DateTime>(taskDate.value);
     }
+    if (priority.present) {
+      map['priority'] = Variable<int>(priority.value);
+    }
+    if (notificationTime.present) {
+      map['notification_time'] = Variable<DateTime>(notificationTime.value);
+    }
+    if (notificationId.present) {
+      map['notification_id'] = Variable<int>(notificationId.value);
+    }
     return map;
   }
 
@@ -492,7 +633,10 @@ class TasksCompanion extends UpdateCompanion<TaskData> {
           ..write('createdAt: $createdAt, ')
           ..write('completedAt: $completedAt, ')
           ..write('routineTaskId: $routineTaskId, ')
-          ..write('taskDate: $taskDate')
+          ..write('taskDate: $taskDate, ')
+          ..write('priority: $priority, ')
+          ..write('notificationTime: $notificationTime, ')
+          ..write('notificationId: $notificationId')
           ..write(')'))
         .toString();
   }
@@ -1024,6 +1168,9 @@ typedef $$TasksTableCreateCompanionBuilder = TasksCompanion Function({
   Value<DateTime?> completedAt,
   Value<int?> routineTaskId,
   Value<DateTime?> taskDate,
+  Value<int> priority,
+  Value<DateTime?> notificationTime,
+  Value<int?> notificationId,
 });
 typedef $$TasksTableUpdateCompanionBuilder = TasksCompanion Function({
   Value<int> id,
@@ -1035,6 +1182,9 @@ typedef $$TasksTableUpdateCompanionBuilder = TasksCompanion Function({
   Value<DateTime?> completedAt,
   Value<int?> routineTaskId,
   Value<DateTime?> taskDate,
+  Value<int> priority,
+  Value<DateTime?> notificationTime,
+  Value<int?> notificationId,
 });
 
 class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
@@ -1071,6 +1221,17 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
 
   ColumnFilters<DateTime> get taskDate => $composableBuilder(
       column: $table.taskDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get priority => $composableBuilder(
+      column: $table.priority, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get notificationTime => $composableBuilder(
+      column: $table.notificationTime,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get notificationId => $composableBuilder(
+      column: $table.notificationId,
+      builder: (column) => ColumnFilters(column));
 }
 
 class $$TasksTableOrderingComposer
@@ -1109,6 +1270,17 @@ class $$TasksTableOrderingComposer
 
   ColumnOrderings<DateTime> get taskDate => $composableBuilder(
       column: $table.taskDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get priority => $composableBuilder(
+      column: $table.priority, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get notificationTime => $composableBuilder(
+      column: $table.notificationTime,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get notificationId => $composableBuilder(
+      column: $table.notificationId,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$TasksTableAnnotationComposer
@@ -1146,6 +1318,15 @@ class $$TasksTableAnnotationComposer
 
   GeneratedColumn<DateTime> get taskDate =>
       $composableBuilder(column: $table.taskDate, builder: (column) => column);
+
+  GeneratedColumn<int> get priority =>
+      $composableBuilder(column: $table.priority, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get notificationTime => $composableBuilder(
+      column: $table.notificationTime, builder: (column) => column);
+
+  GeneratedColumn<int> get notificationId => $composableBuilder(
+      column: $table.notificationId, builder: (column) => column);
 }
 
 class $$TasksTableTableManager extends RootTableManager<
@@ -1180,6 +1361,9 @@ class $$TasksTableTableManager extends RootTableManager<
             Value<DateTime?> completedAt = const Value.absent(),
             Value<int?> routineTaskId = const Value.absent(),
             Value<DateTime?> taskDate = const Value.absent(),
+            Value<int> priority = const Value.absent(),
+            Value<DateTime?> notificationTime = const Value.absent(),
+            Value<int?> notificationId = const Value.absent(),
           }) =>
               TasksCompanion(
             id: id,
@@ -1191,6 +1375,9 @@ class $$TasksTableTableManager extends RootTableManager<
             completedAt: completedAt,
             routineTaskId: routineTaskId,
             taskDate: taskDate,
+            priority: priority,
+            notificationTime: notificationTime,
+            notificationId: notificationId,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -1202,6 +1389,9 @@ class $$TasksTableTableManager extends RootTableManager<
             Value<DateTime?> completedAt = const Value.absent(),
             Value<int?> routineTaskId = const Value.absent(),
             Value<DateTime?> taskDate = const Value.absent(),
+            Value<int> priority = const Value.absent(),
+            Value<DateTime?> notificationTime = const Value.absent(),
+            Value<int?> notificationId = const Value.absent(),
           }) =>
               TasksCompanion.insert(
             id: id,
@@ -1213,6 +1403,9 @@ class $$TasksTableTableManager extends RootTableManager<
             completedAt: completedAt,
             routineTaskId: routineTaskId,
             taskDate: taskDate,
+            priority: priority,
+            notificationTime: notificationTime,
+            notificationId: notificationId,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

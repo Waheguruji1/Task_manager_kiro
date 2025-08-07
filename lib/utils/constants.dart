@@ -16,6 +16,7 @@ class AppConstants {
   static const String userNameKey = 'user_name';
   static const String firstLaunchKey = 'first_launch';
   static const String lastResetDateKey = 'last_reset_date';
+  static const String notificationsEnabledKey = 'notifications_enabled';
 
   // Database Constants
   static const String databaseName = 'task_manager.db';
@@ -183,6 +184,18 @@ class AppStrings {
       'Routine tasks have been reset for today';
   static const String dailyMotivation =
       'You\'ve got this! Let\'s make today productive.';
+
+  // Notification Settings
+  static const String notificationsTitle = 'Notifications';
+  static const String notificationsSubtitle = 'Manage your task reminders';
+  static const String enableNotificationsTitle = 'Enable Notifications';
+  static const String enableNotificationsSubtitle = 'Get reminders for your tasks';
+  static const String notificationPermissionTitle = 'Notification Permission';
+  static const String notificationPermissionGranted = 'Notifications are enabled';
+  static const String notificationPermissionDenied = 'Notifications are disabled';
+  static const String notificationPermissionGuidance = 'Go to Settings > Notifications to enable';
+  static const String notificationSettingsUpdated = 'Notification settings updated';
+  static const String requestPermissionButton = 'Request Permission';
 }
 
 /// Icon Constants

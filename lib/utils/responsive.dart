@@ -102,26 +102,29 @@ class ResponsiveUtils {
   static double getTaskContainerHeight(BuildContext context) {
     final screenSize = getScreenSize(context);
     final isLandscapeMode = isLandscape(context);
+    final screenHeight = MediaQuery.of(context).size.height;
     
     if (isLandscapeMode) {
-      // Reduce height in landscape mode
+      // Reduce height in landscape mode and make it responsive to screen height
+      final maxHeight = screenHeight * 0.6;
       switch (screenSize) {
         case ScreenSize.mobile:
-          return 300;
+          return (300.0).clamp(200.0, maxHeight);
         case ScreenSize.tablet:
-          return 350;
+          return (350.0).clamp(250.0, maxHeight);
         case ScreenSize.desktop:
-          return 400;
+          return (400.0).clamp(300.0, maxHeight);
       }
     } else {
-      // Standard height in portrait mode
+      // Standard height in portrait mode with screen height consideration
+      final maxHeight = screenHeight * 0.7;
       switch (screenSize) {
         case ScreenSize.mobile:
-          return 400;
+          return (400.0).clamp(300.0, maxHeight);
         case ScreenSize.tablet:
-          return 500;
+          return (500.0).clamp(400.0, maxHeight);
         case ScreenSize.desktop:
-          return 600;
+          return (600.0).clamp(500.0, maxHeight);
       }
     }
   }
@@ -195,6 +198,56 @@ class ResponsiveUtils {
     }
     
     return safePadding;
+  }
+  
+  /// Get responsive text truncation length based on screen size
+  static int getTextTruncationLength(BuildContext context, {int baseLength = 50}) {
+    final screenSize = getScreenSize(context);
+    final isLandscapeMode = isLandscape(context);
+    
+    double multiplier = 1.0;
+    
+    switch (screenSize) {
+      case ScreenSize.mobile:
+        multiplier = isLandscapeMode ? 1.3 : 1.0;
+        break;
+      case ScreenSize.tablet:
+        multiplier = isLandscapeMode ? 1.8 : 1.5;
+        break;
+      case ScreenSize.desktop:
+        multiplier = isLandscapeMode ? 2.2 : 2.0;
+        break;
+    }
+    
+    return (baseLength * multiplier).round();
+  }
+  
+  /// Get responsive button padding
+  static EdgeInsets getButtonPadding(BuildContext context) {
+    final screenSize = getScreenSize(context);
+    
+    switch (screenSize) {
+      case ScreenSize.mobile:
+        return const EdgeInsets.symmetric(horizontal: 12, vertical: 8);
+      case ScreenSize.tablet:
+        return const EdgeInsets.symmetric(horizontal: 16, vertical: 10);
+      case ScreenSize.desktop:
+        return const EdgeInsets.symmetric(horizontal: 20, vertical: 12);
+    }
+  }
+  
+  /// Get responsive icon size
+  static double getIconSize(BuildContext context, {double baseSize = 20}) {
+    final screenSize = getScreenSize(context);
+    
+    switch (screenSize) {
+      case ScreenSize.mobile:
+        return baseSize;
+      case ScreenSize.tablet:
+        return baseSize * 1.1;
+      case ScreenSize.desktop:
+        return baseSize * 1.2;
+    }
   }
 }
 

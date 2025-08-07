@@ -315,6 +315,12 @@ class AchievementWidget extends StatelessWidget {
 ### Task Model
 
 ```dart
+enum TaskPriority {
+  none,
+  medium,
+  high,
+}
+
 class Task {
   final int? id;
   final String title;
@@ -323,6 +329,9 @@ class Task {
   final bool isRoutine;
   final DateTime createdAt;
   final DateTime? completedAt;
+  final TaskPriority priority;
+  final DateTime? notificationTime;
+  final int? notificationId;
   
   Task({
     this.id,
@@ -332,6 +341,9 @@ class Task {
     this.isRoutine = false,
     required this.createdAt,
     this.completedAt,
+    this.priority = TaskPriority.none,
+    this.notificationTime,
+    this.notificationId,
   });
   
   Task copyWith({
@@ -342,10 +354,37 @@ class Task {
     bool? isRoutine,
     DateTime? createdAt,
     DateTime? completedAt,
+    TaskPriority? priority,
+    DateTime? notificationTime,
+    int? notificationId,
   }) { /* Implementation */ }
   
   Map<String, dynamic> toJson() { /* Implementation */ }
   factory Task.fromJson(Map<String, dynamic> json) { /* Implementation */ }
+  
+  // Helper methods for priority colors
+  Color get priorityColor {
+    switch (priority) {
+      case TaskPriority.high:
+        return const Color(0xFF8B5CF6); // Purple
+      case TaskPriority.medium:
+        return const Color(0xFF10B981); // Green
+      case TaskPriority.none:
+        return Colors.transparent;
+    }
+  }
+  
+  // Helper method for priority sorting
+  int get priorityOrder {
+    switch (priority) {
+      case TaskPriority.high:
+        return 0;
+      case TaskPriority.medium:
+        return 1;
+      case TaskPriority.none:
+        return 2;
+    }
+  }
 }
 ```
 
@@ -433,6 +472,11 @@ class Tasks extends Table {
   BoolColumn get isRoutine => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get completedAt => dateTime().nullable()();
+  IntColumn get priority => intEnum<TaskPriority>().withDefault(const Constant(0))(); // 0 = none, 1 = medium, 2 = high
+  DateTimeColumn get notificationTime => dateTime().nullable()();
+  IntColumn get notificationId => integer().nullable()();
+  IntColumn get routineTaskId => integer().nullable()();
+  DateTimeColumn get taskDate => dateTime().nullable()();
 }
 
 @DataClassName('AchievementData')
@@ -669,6 +713,62 @@ class StatsService {
   DateTime _normalizeDate(DateTime date) { /* Implementation */ }
   List<DateTime> _getDateRange(DateTime start, DateTime end) { /* Implementation */ }
   Color _getHeatmapIntensityColor(int value, int maxValue, Color baseColor) { /* Implementation */ }
+}
+```
+
+### Notification Service (`notification_service.dart`)
+
+**Purpose**: Local notification management and scheduling
+
+**Key Methods**:
+```dart
+class NotificationService {
+  static final NotificationService _instance = NotificationService._internal();
+  factory NotificationService() => _instance;
+  NotificationService._internal();
+  
+  late FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin;
+  
+  Future<void> initialize() async { /* Initialize notification plugin */ }
+  Future<bool> requestPermissions() async { /* Request notification permissions */ }
+  
+  // Notification scheduling
+  Future<int> scheduleTaskNotification(Task task) async { /* Implementation */ }
+  Future<void> cancelTaskNotification(int notificationId) async { /* Implementation */ }
+  Future<void> cancelAllNotifications() async { /* Implementation */ }
+  Future<void> rescheduleAllNotifications(List<Task> tasks) async { /* Implementation */ }
+  
+  // Notification settings
+  Future<bool> areNotificationsEnabled() async { /* Implementation */ }
+  Future<void> showTaskCompletionNotification(Task task) async { /* Implementation */ }
+  
+  // Helper methods
+  int _generateNotificationId() { /* Implementation */ }
+  String _formatNotificationBody(Task task) { /* Implementation */ }
+}
+```
+
+### Task Cleanup Service (`task_cleanup_service.dart`)
+
+**Purpose**: Automatic cleanup of old completed tasks
+
+**Key Methods**:
+```dart
+class TaskCleanupService {
+  static final TaskCleanupService _instance = TaskCleanupService._internal();
+  factory TaskCleanupService() => _instance;
+  TaskCleanupService._internal();
+  
+  static const int _cleanupThresholdMonths = 2;
+  
+  Future<void> performCleanup(DatabaseService databaseService) async { /* Implementation */ }
+  Future<List<Task>> getTasksToCleanup(List<Task> tasks) async { /* Implementation */ }
+  Future<void> cleanupOldTasks(List<Task> tasksToDelete, DatabaseService databaseService) async { /* Implementation */ }
+  
+  // Helper methods
+  bool _shouldCleanupTask(Task task) { /* Implementation */ }
+  DateTime _getCleanupThresholdDate() { /* Implementation */ }
+  Future<void> _logCleanupActivity(int deletedCount) async { /* Implementation */ }
 }
 
 ## Error Handling

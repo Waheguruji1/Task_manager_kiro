@@ -19,6 +19,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _isLoading = false;
+  bool _isUpdatingNotifications = false;
 
   /// Handle clear all data
   Future<void> _handleClearAllData() async {
@@ -117,6 +118,99 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         ErrorHandler.showErrorSnackBar(context, 'Failed to share app');
+      }
+    }
+  }
+
+  /// Handle notification toggle
+  Future<void> _handleNotificationToggle(bool enabled) async {
+    if (_isUpdatingNotifications) return;
+
+    setState(() {
+      _isUpdatingNotifications = true;
+    });
+
+    try {
+      final prefsService = await ref.read(asyncPreferencesServiceProvider.future);
+      final notificationService = ref.read(notificationServiceProvider);
+      
+      if (enabled) {
+        // Request permission first
+        final hasPermission = await notificationService.requestPermissions();
+        if (!hasPermission) {
+          if (mounted) {
+            ErrorHandler.showErrorSnackBar(
+              context, 
+              'Notification permission denied. Please enable in device settings.',
+            );
+          }
+          return;
+        }
+        
+        // Enable notifications and reschedule all
+        await prefsService.setNotificationsEnabled(true);
+        final allTasks = await ref.read(allTasksProvider.future);
+        await notificationService.rescheduleAllNotifications(allTasks);
+      } else {
+        // Disable notifications and cancel all
+        await prefsService.setNotificationsEnabled(false);
+        await notificationService.cancelAllNotifications();
+      }
+
+      // Refresh providers
+      ref.invalidate(notificationsEnabledProvider);
+      ref.invalidate(notificationPermissionStatusProvider);
+
+      if (mounted) {
+        ErrorHandler.showSuccessSnackBar(
+          context, 
+          AppStrings.notificationSettingsUpdated,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context,
+          'Failed to update notification settings: ${e.toString()}',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdatingNotifications = false;
+        });
+      }
+    }
+  }
+
+  /// Handle request notification permission
+  Future<void> _handleRequestPermission() async {
+    try {
+      final notificationService = ref.read(notificationServiceProvider);
+      final hasPermission = await notificationService.requestPermissions();
+      
+      // Refresh permission status
+      ref.invalidate(notificationPermissionStatusProvider);
+      
+      if (mounted) {
+        if (hasPermission) {
+          ErrorHandler.showSuccessSnackBar(
+            context,
+            'Notification permission granted!',
+          );
+        } else {
+          ErrorHandler.showErrorSnackBar(
+            context,
+            'Notification permission denied. Please enable in device settings.',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context,
+          'Failed to request notification permission',
+        );
       }
     }
   }
@@ -224,6 +318,140 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  /// Build notification toggle item
+  Widget _buildNotificationToggleItem({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    bool isLoading = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.spacingM),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppTheme.spacingS),
+            decoration: BoxDecoration(
+              color: AppTheme.greyPrimary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: AppTheme.greyPrimary,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: AppTheme.spacingM),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTheme.bodyLarge.copyWith(
+                    color: AppTheme.primaryText,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: AppTheme.bodyMedium.copyWith(
+                      color: AppTheme.secondaryText,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (isLoading)
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.greyPrimary),
+              ),
+            )
+          else
+            Switch(
+              value: value,
+              onChanged: onChanged,
+              activeThumbColor: AppTheme.greyPrimary,
+              inactiveThumbColor: AppTheme.secondaryText,
+              inactiveTrackColor: AppTheme.secondaryText.withValues(alpha: 0.3),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Build permission status item
+  Widget _buildPermissionStatusItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool hasPermission,
+    VoidCallback? onRequestPermission,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.spacingM),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppTheme.spacingS),
+            decoration: BoxDecoration(
+              color: (hasPermission ? Colors.green : Colors.orange).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: hasPermission ? Colors.green : Colors.orange,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: AppTheme.spacingM),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTheme.bodyLarge.copyWith(
+                    color: AppTheme.primaryText,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: AppTheme.bodyMedium.copyWith(
+                    color: AppTheme.secondaryText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!hasPermission && onRequestPermission != null)
+            TextButton(
+              onPressed: onRequestPermission,
+              style: TextButton.styleFrom(
+                foregroundColor: AppTheme.greyPrimary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.spacingS,
+                  vertical: AppTheme.spacingXS,
+                ),
+              ),
+              child: const Text(AppStrings.requestPermissionButton),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final userNameAsync = ref.watch(userNameProvider);
@@ -306,6 +534,83 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               ),
                             ),
                           ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
+
+                // Notification Settings
+                _buildSettingsSection(
+                  title: AppStrings.notificationsTitle,
+                  children: [
+                    // Notification toggle
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final notificationsEnabledAsync = ref.watch(notificationsEnabledProvider);
+                        
+                        return notificationsEnabledAsync.when(
+                          data: (isEnabled) => _buildNotificationToggleItem(
+                            icon: Icons.notifications,
+                            title: AppStrings.enableNotificationsTitle,
+                            subtitle: AppStrings.enableNotificationsSubtitle,
+                            value: isEnabled,
+                            onChanged: _handleNotificationToggle,
+                            isLoading: _isUpdatingNotifications,
+                          ),
+                          loading: () => _buildNotificationToggleItem(
+                            icon: Icons.notifications,
+                            title: AppStrings.enableNotificationsTitle,
+                            subtitle: AppStrings.enableNotificationsSubtitle,
+                            value: false,
+                            onChanged: (_) {},
+                            isLoading: true,
+                          ),
+                          error: (_, __) => _buildNotificationToggleItem(
+                            icon: Icons.notifications,
+                            title: AppStrings.enableNotificationsTitle,
+                            subtitle: AppStrings.enableNotificationsSubtitle,
+                            value: false,
+                            onChanged: _handleNotificationToggle,
+                          ),
+                        );
+                      },
+                    ),
+                    
+                    // Divider
+                    Container(
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingM),
+                      color: AppTheme.borderWhite.withValues(alpha: 0.3),
+                    ),
+                    
+                    // Permission status
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final permissionStatusAsync = ref.watch(notificationPermissionStatusProvider);
+                        
+                        return permissionStatusAsync.when(
+                          data: (hasPermission) => _buildPermissionStatusItem(
+                            icon: hasPermission ? Icons.check_circle : Icons.warning,
+                            title: AppStrings.notificationPermissionTitle,
+                            subtitle: hasPermission 
+                              ? AppStrings.notificationPermissionGranted
+                              : AppStrings.notificationPermissionDenied,
+                            hasPermission: hasPermission,
+                            onRequestPermission: hasPermission ? null : _handleRequestPermission,
+                          ),
+                          loading: () => _buildPermissionStatusItem(
+                            icon: Icons.info,
+                            title: AppStrings.notificationPermissionTitle,
+                            subtitle: 'Checking permission status...',
+                            hasPermission: false,
+                          ),
+                          error: (_, __) => _buildPermissionStatusItem(
+                            icon: Icons.error,
+                            title: AppStrings.notificationPermissionTitle,
+                            subtitle: 'Unable to check permission status',
+                            hasPermission: false,
+                          ),
                         );
                       },
                     ),

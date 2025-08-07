@@ -95,14 +95,7 @@
   - Ensure consistent theme application across all components
   - _Requirements: 4, 5, 7_
 
-- [ ] 14. Create comprehensive testing suite
-  - Write unit tests for all service classes (database, preferences, share)
-  - Create widget tests for all custom components and screens
-  - Implement integration tests for complete user workflows
-  - Add tests for database operations, navigation flows, and error scenarios
-  - _Requirements: All requirements validation_
-
-- [x] 15. Optimize performance and finalize app
+- [x] 14. Optimize performance and finalize app
   - Implement ListView.builder for efficient task list rendering
   - Add proper widget disposal and memory management
   - Optimize database queries with appropriate indexing
@@ -110,7 +103,7 @@
   - Add app icon and ensure proper asset integration
   - _Requirements: 5, 7, 8_
 
-- [x] 16. Integrate Riverpod state management
+- [x] 15. Integrate Riverpod state management
   - Add flutter_riverpod dependency to pubspec.yaml
   - Wrap main app with ProviderScope for Riverpod initialization
   - Create providers for database service, preferences service, and share service
@@ -123,7 +116,7 @@
   - Update all screens and widgets to use Riverpod providers instead of direct service calls
   - _Requirements: 9, 10_
 
-- [x] 17. Implement Achievement model and database schema
+- [x] 16. Implement Achievement model and database schema
   - Create models/achievement.dart with Achievement class and AchievementType enum
   - Add JSON serialization methods and copyWith functionality to Achievement model
   - Update models/database.dart to include Achievements table with proper schema
@@ -132,7 +125,7 @@
   - Create default achievements initialization in database setup
   - _Requirements: 12_
 
-- [x] 18. Create Achievement Service for progress tracking
+- [x] 17. Create Achievement Service for progress tracking
   - Create services/achievement_service.dart with singleton pattern
   - Implement achievement progress calculation methods for streaks and daily counts
   - Add methods to check and unlock achievements based on task completion patterns
@@ -141,7 +134,7 @@
   - Add achievement update methods with proper database persistence
   - _Requirements: 12_
 
-- [x] 19. Create Stats Service for heatmap data calculation
+- [x] 18. Create Stats Service for heatmap data calculation
   - Create services/stats_service.dart with heatmap data generation methods
   - Implement completion heatmap data calculation with daily task completion counts
   - Create creation vs completion heatmap data with both metrics per day
@@ -150,7 +143,7 @@
   - Create monthly and weekly statistics calculation methods
   - _Requirements: 11_
 
-- [x] 20. Build reusable Heatmap Widget component
+- [x] 19. Build reusable Heatmap Widget component
   - Create widgets/heatmap_widget.dart with configurable color schemes
   - Implement calendar-style grid layout with monthly organization
   - Add interactive tooltip functionality for displaying daily data
@@ -159,7 +152,7 @@
   - Add support for both single value and multi-value data display
   - _Requirements: 11_
 
-- [x] 21. Create Achievement Widget for displaying achievements
+- [x] 20. Create Achievement Widget for displaying achievements
   - Create widgets/achievement_widget.dart for individual achievement display
   - Implement earned achievement badge with icon and title
   - Add progress indicator for unearned achievements with percentage display
@@ -168,7 +161,7 @@
   - Add proper theme integration with consistent styling
   - _Requirements: 12_
 
-- [x] 22. Enhance Stats Screen with heatmaps and achievements
+- [x] 21. Enhance Stats Screen with heatmaps and achievements
   - Update lib/screens/stats_screen.dart to include heatmap sections
   - Implement task completion activity heatmap with purple color scheme
   - Add task creation vs completion heatmap with green color scheme
@@ -178,30 +171,131 @@
   - Implement responsive layout for different screen sizes
   - _Requirements: 11, 12_
 
-- [ ] 23. Integrate achievement tracking with task operations
-  - Update task completion logic to trigger achievement checking
-  - Add achievement service calls when tasks are created, completed, or updated
-  - Implement real-time achievement unlocking with proper notifications
-  - Create achievement progress updates when task patterns change
-  - Add achievement checking for routine task consistency
+- [x] 22. Integrate achievement tracking with task operations
+  - Update TaskStateNotifier to call achievement service after task operations
+  - Add achievement checking calls in addTask, updateTask, deleteTask, and toggleTaskCompletion methods
+  - Implement real-time achievement progress updates when tasks are modified
+  - Add achievement checking for routine task consistency tracking
   - Implement streak calculation updates on daily task completion
+  - Add proper error handling for achievement service calls
   - _Requirements: 12_
 
-- [ ] 24. Add Riverpod providers for achievements and stats
-  - Create achievement providers in lib/providers/providers.dart
-  - Implement stats service provider with proper caching
-  - Add achievement progress providers with real-time updates
-  - Create heatmap data providers with efficient calculation
-  - Implement achievement notification provider for unlocked achievements
-  - Add proper provider disposal and memory management
-  - _Requirements: 11, 12_
+- [x] 23. Enhance Task model with priority and notification support
+  - Add TaskPriority enum with none, medium, high values to models/task.dart
+  - Update Task model to include priority, notificationTime, and notificationId fields
+  - Implement priority color helper methods (purple for high, green for medium)
+  - Add priority sorting helper method for task ordering
+  - Update Task copyWith method to include new priority and notification fields
+  - Update JSON serialization methods to handle priority and notification data
+  - _Requirements: 13, 14_
 
-- [ ] 25. Create comprehensive testing for new features
-  - Write unit tests for Achievement model and AchievementService
-  - Create tests for Stats Service heatmap data calculation methods
-  - Implement widget tests for HeatmapWidget with different data scenarios
-  - Add tests for AchievementWidget display and progress functionality
-  - Create integration tests for achievement unlocking workflows
-  - Test heatmap interactivity and tooltip functionality
-  - Add tests for database migration and achievement initialization
-  - _Requirements: 11, 12_
+- [x] 24. Update database schema for priority and notifications
+  - Update models/database.dart to include priority, notificationTime, and notificationId columns
+  - Implement database migration from current schema to include new fields
+  - Update database service methods to handle priority and notification data
+  - Add database queries for priority-based task sorting
+  - Test database migration with existing data
+  - _Requirements: 13, 14_
+
+- [x] 25. Create Notification Service for task reminders
+  - Add flutter_local_notifications dependency to pubspec.yaml
+  - Create services/notification_service.dart with singleton pattern
+  - Implement notification initialization and permission request methods
+  - Add methods for scheduling, canceling, and managing task notifications
+  - Create notification ID generation and management system
+  - Implement notification formatting and display methods
+  - Add methods for bulk notification operations (cancel all, reschedule all)
+  - _Requirements: 14_
+
+- [x] 26. Enhance Add Task Dialog with priority and notification options
+  - Update widgets/add_task_dialog.dart to include priority dropdown
+  - Implement upward-opening dropdown for priority selection (High, Medium, No Priority)
+  - Add notification time dropdown with 1hr, 2hr, and custom time options
+  - Implement custom time picker for notification scheduling
+  - Hide priority and notification options for routine tasks
+  - Update form validation and saving logic to handle new fields
+  - Ensure dropdowns match app theme and open upward to save screen space
+  - _Requirements: 13, 14_
+
+- [x] 27. Implement priority-based task sorting and visual distinction
+  - Update task display widgets to show priority colors (purple for high, green for medium)
+  - Implement automatic task sorting by priority (High → Medium → No Priority)
+  - Add subtle priority visual indicators without overwhelming the interface
+  - Update CompactTaskWidget to handle priority-based rendering
+  - Ensure priority colors maintain theme consistency and accessibility
+  - Test priority sorting and visual distinction across different screen sizes
+  - _Requirements: 13_
+
+- [x] 28. Create Settings Screen for notification management
+  - Create screens/settings_screen.dart with notification management options
+  - Add toggle for enabling/disabling all notifications globally
+  - Display current notification permission status and guidance
+  - Implement settings persistence using SharedPreferences
+  - Add navigation to settings screen from main navigation
+  - Create settings UI that matches app theme and provides clear user feedback
+  - Implement immediate settings application without app restart
+  - _Requirements: 15_
+
+- [x] 29. Implement text truncation across all task displays
+  - Update task display widgets to truncate long task titles with ellipsis
+  - Implement tap-to-expand functionality for truncated text
+  - Add consistent text truncation to task containers and items
+  - Ensure truncation maintains proper spacing and alignment
+  - Test truncation behavior with various text lengths and screen sizes
+  - Apply truncation consistently across all task-related UI components
+  - _Requirements: 16_
+
+- [x] 30. Create Task Cleanup Service for automatic deletion
+  - Create services/task_cleanup_service.dart with 2-month cleanup threshold
+  - Implement methods to identify and delete completed everyday tasks older than 2 months
+  - Add background cleanup process that runs on app startup
+  - Ensure routine tasks are excluded from auto-deletion
+  - Preserve task statistics and achievement data during cleanup
+  - Add cleanup logging and error handling
+  - Test cleanup service with various task completion dates
+  - _Requirements: 17_
+
+- [x] 31. Integrate notification scheduling with task operations
+  - Update task creation and editing to schedule notifications when notification time is set
+  - Implement notification cancellation when tasks are completed or deleted
+  - Add notification rescheduling when task notification times are modified
+  - Integrate notification service with TaskStateNotifier for real-time updates
+  - Handle notification permissions and graceful fallbacks
+  - Test notification scheduling and cancellation across different scenarios
+  - _Requirements: 14_
+
+- [x] 32. Update UI components for enhanced user experience
+  - Ensure all dropdowns open upward to save screen space
+  - Implement consistent text truncation across all components
+  - Update task containers to display priority colors subtly
+  - Enhance visual hierarchy while maintaining clean, minimal design
+  - Test UI enhancements across different screen sizes and orientations
+  - Ensure all new UI elements follow app theme specifications
+  - _Requirements: 13, 14, 16_
+
+- [x] 33. Implement main navigation with bottom navigation bar
+  - Create screens/main_navigation_screen.dart with bottom navigation
+  - Add navigation between Home, Stats, and Settings screens
+  - Implement proper tab selection and state management
+  - Ensure navigation follows app theme with consistent styling
+  - Add proper icons and labels for each navigation item
+  - _Requirements: 2, 15_
+
+- [ ] 34. Create comprehensive testing for new features
+  - Write unit tests for TaskPriority enum and Task model priority methods
+  - Create unit tests for NotificationService scheduling and cancellation methods
+  - Add unit tests for TaskCleanupService cleanup logic and date calculations
+  - Write integration tests for priority-based task sorting and display
+  - Add tests for notification scheduling and settings management
+  - Create tests for text truncation and UI responsiveness
+  - Test database migration and new field handling
+  - _Requirements: 13, 14, 15, 16, 17_
+
+- [ ] 35. Final integration and testing of all features
+  - Integrate all new services with existing Riverpod providers
+  - Test complete user workflows with priority, notifications, and cleanup
+  - Perform end-to-end testing of task creation, editing, and management with new features
+  - Verify settings persistence and notification management functionality
+  - Test app performance with cleanup service and notification scheduling
+  - Ensure all new features maintain app theme consistency and user experience
+  - _Requirements: 13, 14, 15, 16, 17_

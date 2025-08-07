@@ -6,6 +6,7 @@ class PreferencesService {
   static const String _userNameKey = AppConstants.userNameKey;
   static const String _firstLaunchKey = AppConstants.firstLaunchKey;
   static const String _lastResetDateKey = AppConstants.lastResetDateKey;
+  static const String _notificationsEnabledKey = AppConstants.notificationsEnabledKey;
   
   static PreferencesService? _instance;
   static SharedPreferences? _preferences;
@@ -104,6 +105,7 @@ class PreferencesService {
       await _preferences!.remove(_userNameKey);
       await _preferences!.remove(_firstLaunchKey);
       await _preferences!.remove(_lastResetDateKey);
+      await _preferences!.remove(_notificationsEnabledKey);
       return true;
     } catch (e) {
       ErrorHandler.logError(e, context: 'Clear user data', type: ErrorType.preferences);
@@ -157,6 +159,31 @@ class PreferencesService {
       }
       throw AppException(
         message: ErrorHandler.handlePreferencesError(e, context: 'Set last reset date'),
+        type: ErrorType.preferences,
+        originalError: e,
+      );
+    }
+  }
+
+  /// Get notification enabled status
+  Future<bool> areNotificationsEnabled() async {
+    try {
+      return _preferences!.getBool(_notificationsEnabledKey) ?? true; // Default to enabled
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Get notifications enabled', type: ErrorType.preferences);
+      // Return true as default to be safe
+      return true;
+    }
+  }
+
+  /// Set notification enabled status
+  Future<bool> setNotificationsEnabled(bool enabled) async {
+    try {
+      return await _preferences!.setBool(_notificationsEnabledKey, enabled);
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Set notifications enabled', type: ErrorType.preferences);
+      throw AppException(
+        message: ErrorHandler.handlePreferencesError(e, context: 'Set notifications enabled'),
         type: ErrorType.preferences,
         originalError: e,
       );

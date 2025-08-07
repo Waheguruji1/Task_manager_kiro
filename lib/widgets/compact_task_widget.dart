@@ -7,6 +7,7 @@ import '../utils/responsive.dart';
 import '../providers/providers.dart';
 import 'task_item.dart';
 import 'add_task_dialog.dart';
+import 'truncated_text.dart';
 
 /// Compact Task Widget
 /// 
@@ -115,34 +116,62 @@ class _CompactTaskWidgetState extends ConsumerState<CompactTaskWidget>
         responsivePadding.horizontal / 2,
         AppTheme.spacingS,
       ),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: AppTheme.borderWhite.withValues(alpha: 0.15),
+            width: 1,
+          ),
+        ),
+      ),
       child: Row(
         children: [
-          // Title
+          // Title with enhanced truncation and typography
           Expanded(
-            child: Text(
-              widget.title,
+            child: SimpleTruncatedText(
+              text: widget.title,
+              maxLength: ResponsiveUtils.isSmallScreen(context) ? 25 : 35,
               style: AppTheme.headingMedium.copyWith(
                 fontSize: 20 * fontMultiplier,
                 fontWeight: FontWeight.w600,
+                letterSpacing: 0.3,
+                height: 1.2,
               ),
+              showTooltipOnTap: true,
             ),
           ),
           
-          // Add task button
+          const SizedBox(width: AppTheme.spacingM),
+          
+          // Enhanced add task button with better visual feedback
           Material(
-            color: AppTheme.greyPrimary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(AppTheme.buttonBorderRadius),
+            color: Colors.transparent,
             child: InkWell(
               onTap: _handleAddTask,
-              borderRadius: BorderRadius.circular(AppTheme.buttonBorderRadius),
+              borderRadius: BorderRadius.circular(20),
               splashColor: AppTheme.greyPrimary.withValues(alpha: 0.2),
               highlightColor: AppTheme.greyPrimary.withValues(alpha: 0.1),
               child: Container(
                 padding: const EdgeInsets.all(AppTheme.spacingS),
+                decoration: BoxDecoration(
+                  color: AppTheme.greyPrimary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppTheme.borderWhite.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.greyPrimary.withValues(alpha: 0.08),
+                      offset: const Offset(0, 1),
+                      blurRadius: 3,
+                    ),
+                  ],
+                ),
                 child: const Icon(
                   Icons.add,
                   color: AppTheme.greyPrimary,
-                  size: 24,
+                  size: 22,
                 ),
               ),
             ),
@@ -158,12 +187,15 @@ class _CompactTaskWidgetState extends ConsumerState<CompactTaskWidget>
       return _buildEmptyState();
     }
 
+    // Sort tasks by priority (High → Medium → No Priority)
+    final sortedTasks = Task.sortByPriority(tasks);
+
     // Determine how many tasks to show
     final tasksToShow = _isExpanded 
-        ? tasks 
-        : tasks.take(widget.maxTasksWhenCollapsed).toList();
+        ? sortedTasks 
+        : sortedTasks.take(widget.maxTasksWhenCollapsed).toList();
     
-    final hasMoreTasks = tasks.length > widget.maxTasksWhenCollapsed;
+    final hasMoreTasks = sortedTasks.length > widget.maxTasksWhenCollapsed;
 
     return Column(
       children: [
@@ -198,7 +230,7 @@ class _CompactTaskWidgetState extends ConsumerState<CompactTaskWidget>
         
         // Show more/less button
         if (hasMoreTasks)
-          _buildExpandCollapseButton(tasks.length),
+          _buildExpandCollapseButton(sortedTasks.length),
       ],
     );
   }
@@ -207,47 +239,66 @@ class _CompactTaskWidgetState extends ConsumerState<CompactTaskWidget>
   Widget _buildExpandCollapseButton(int totalTasks) {
     final remainingTasks = totalTasks - widget.maxTasksWhenCollapsed;
     
-    return Padding(
-      padding: const EdgeInsets.symmetric(
+    return Container(
+      margin: const EdgeInsets.symmetric(
         horizontal: AppTheme.spacingM,
         vertical: AppTheme.spacingS,
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: _toggleExpanded,
-          borderRadius: BorderRadius.circular(AppTheme.buttonBorderRadius),
-          splashColor: AppTheme.greyPrimary.withValues(alpha: 0.1),
-          highlightColor: AppTheme.greyPrimary.withValues(alpha: 0.05),
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.spacingM,
-              vertical: AppTheme.spacingS,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _isExpanded 
-                      ? 'Show Less'
-                      : 'Show More ($remainingTasks more)',
-                  style: AppTheme.bodyMedium.copyWith(
-                    color: AppTheme.greyPrimary,
-                    fontWeight: FontWeight.w500,
-                  ),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: AppTheme.borderWhite.withValues(alpha: 0.1),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(top: AppTheme.spacingS),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _toggleExpanded,
+            borderRadius: BorderRadius.circular(AppTheme.buttonBorderRadius),
+            splashColor: AppTheme.greyPrimary.withValues(alpha: 0.1),
+            highlightColor: AppTheme.greyPrimary.withValues(alpha: 0.05),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.spacingM,
+                vertical: AppTheme.spacingS,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppTheme.buttonBorderRadius),
+                border: Border.all(
+                  color: AppTheme.borderWhite.withValues(alpha: 0.2),
+                  width: 1,
                 ),
-                const SizedBox(width: AppTheme.spacingXS),
-                AnimatedRotation(
-                  turns: _isExpanded ? 0.5 : 0.0,
-                  duration: const Duration(milliseconds: 300),
-                  child: const Icon(
-                    Icons.keyboard_arrow_down,
-                    color: AppTheme.greyPrimary,
-                    size: 20,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _isExpanded 
+                        ? 'Show Less'
+                        : 'Show More ($remainingTasks more)',
+                    style: AppTheme.bodyMedium.copyWith(
+                      color: AppTheme.greyPrimary,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.1,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: AppTheme.spacingXS),
+                  AnimatedRotation(
+                    turns: _isExpanded ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 300),
+                    child: const Icon(
+                      Icons.keyboard_arrow_down,
+                      color: AppTheme.greyPrimary,
+                      size: 18,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

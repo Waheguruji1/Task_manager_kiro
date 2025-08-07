@@ -327,8 +327,31 @@ class AppTheme {
 
   /// Routine Task Label Decoration
   static BoxDecoration get routineTaskLabelDecoration => BoxDecoration(
-    color: greyPrimary,
+    color: greyPrimary.withValues(alpha: 0.15),
     borderRadius: BorderRadius.circular(6),
-    border: Border.all(color: borderWhite, width: 1),
+    border: Border.all(color: borderWhite.withValues(alpha: 0.4), width: 1),
   );
+
+  /// Enhanced Button Decoration with subtle shadow
+  static BoxDecoration get enhancedButtonDecoration => BoxDecoration(
+    color: greyPrimary.withValues(alpha: 0.1),
+    borderRadius: BorderRadius.circular(buttonBorderRadius),
+    border: Border.all(color: borderWhite.withValues(alpha: 0.3), width: 1),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.05),
+        offset: const Offset(0, 1),
+        blurRadius: 2,
+      ),
+    ],
+  );
+
+  /// Priority High Color (Purple)
+  static const Color priorityHigh = Color(0xFF8B5CF6);
+  
+  /// Priority Medium Color (Green)
+  static const Color priorityMedium = Color(0xFF10B981);
+
+  /// Enhanced visual hierarchy spacing
+  static const double visualHierarchySpacing = 6.0;
 }

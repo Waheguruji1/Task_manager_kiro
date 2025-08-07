@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/task.dart';
 import '../utils/theme.dart';
 import '../utils/error_handler.dart';
+import '../utils/responsive.dart';
+import 'truncated_text.dart';
 
 /// Individual task item widget with checkbox, title, description, and action buttons
 /// 
@@ -35,10 +37,10 @@ class TaskItem extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: AppTheme.spacingS),
       padding: const EdgeInsets.all(AppTheme.spacingM),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceGrey,
+        color: _getTaskBackgroundColor(),
         borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
         border: Border.all(
-          color: AppTheme.borderWhite,
+          color: _getTaskBorderColor(),
           width: 1,
         ),
         boxShadow: [
@@ -52,6 +54,9 @@ class TaskItem extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Priority indicator (subtle left border)
+          if (task.priority != TaskPriority.none) _buildPriorityIndicator(),
+          
           // Checkbox for completion toggle
           _buildCheckbox(),
           
@@ -59,13 +64,13 @@ class TaskItem extends StatelessWidget {
           
           // Task content (title and description)
           Expanded(
-            child: _buildTaskContent(),
+            child: _buildTaskContent(context),
           ),
           
           const SizedBox(width: AppTheme.spacingS),
           
           // Action buttons (edit and delete)
-          _buildActionButtons(),
+          _buildActionButtons(context),
         ],
       ),
     );
@@ -105,32 +110,45 @@ class TaskItem extends StatelessWidget {
   }
 
   /// Builds the task content section with title and description
-  Widget _buildTaskContent() {
+  Widget _buildTaskContent(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Task title with completion styling
-        Text(
-          task.title,
+        // Task title with completion styling and responsive truncation
+        TruncatedText(
+          text: task.title,
+          maxLength: ResponsiveUtils.getTextTruncationLength(context, baseLength: 45),
+          maxLines: 2,
           style: AppTheme.bodyLarge.copyWith(
             decoration: task.isCompleted ? TextDecoration.lineThrough : null,
             color: task.isCompleted 
                 ? AppTheme.secondaryText 
                 : AppTheme.primaryText,
+            fontWeight: FontWeight.w500,
+            height: 1.3,
           ),
+          indicatorColor: task.isCompleted 
+              ? AppTheme.disabledText 
+              : AppTheme.secondaryText,
         ),
         
-        // Task description (if available)
+        // Task description (if available) with responsive truncation
         if (task.description != null && task.description!.isNotEmpty) ...[
           const SizedBox(height: AppTheme.spacingXS),
-          Text(
-            task.description!,
+          TruncatedText(
+            text: task.description!,
+            maxLength: ResponsiveUtils.getTextTruncationLength(context, baseLength: 70),
+            maxLines: 3,
             style: AppTheme.bodyMedium.copyWith(
               decoration: task.isCompleted ? TextDecoration.lineThrough : null,
               color: task.isCompleted 
                   ? AppTheme.disabledText 
                   : AppTheme.secondaryText,
+              height: 1.4,
             ),
+            indicatorColor: task.isCompleted 
+                ? AppTheme.disabledText.withValues(alpha: 0.7)
+                : AppTheme.secondaryText.withValues(alpha: 0.7),
           ),
         ],
         
@@ -173,7 +191,10 @@ class TaskItem extends StatelessWidget {
   }
 
   /// Builds the action buttons for edit and delete
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(BuildContext context) {
+    final iconSize = ResponsiveUtils.getIconSize(context, baseSize: 16);
+    final buttonPadding = ResponsiveUtils.getButtonPadding(context);
+    
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -186,17 +207,18 @@ class TaskItem extends StatelessWidget {
             splashColor: AppTheme.greyPrimary.withValues(alpha: 0.1),
             highlightColor: AppTheme.greyPrimary.withValues(alpha: 0.05),
             child: Container(
-              padding: const EdgeInsets.all(AppTheme.spacingS),
+              padding: EdgeInsets.all(buttonPadding.vertical),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: AppTheme.borderWhite.withValues(alpha: 0.3),
                   width: 0.5,
                 ),
+                color: AppTheme.greyPrimary.withValues(alpha: 0.05),
               ),
               child: Icon(
                 Icons.edit_outlined,
-                size: 16,
+                size: iconSize,
                 color: AppTheme.iconPrimary.withValues(alpha: 0.8),
               ),
             ),
@@ -214,23 +236,70 @@ class TaskItem extends StatelessWidget {
             splashColor: Colors.red.withValues(alpha: 0.1),
             highlightColor: Colors.red.withValues(alpha: 0.05),
             child: Container(
-              padding: const EdgeInsets.all(AppTheme.spacingS),
+              padding: EdgeInsets.all(buttonPadding.vertical),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: Colors.red.withValues(alpha: 0.2),
                   width: 0.5,
                 ),
+                color: Colors.red.withValues(alpha: 0.05),
               ),
               child: Icon(
                 Icons.delete_outline,
-                size: 16,
+                size: iconSize,
                 color: Colors.red.withValues(alpha: 0.8),
               ),
             ),
           ),
         ),
       ],
+    );
+  }
+
+  /// Builds the priority indicator (subtle left border)
+  Widget _buildPriorityIndicator() {
+    return Container(
+      width: 4,
+      height: 32,
+      margin: const EdgeInsets.only(right: AppTheme.spacingS),
+      decoration: BoxDecoration(
+        color: task.priorityColor.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(2),
+        boxShadow: [
+          BoxShadow(
+            color: task.priorityColor.withValues(alpha: 0.2),
+            offset: const Offset(0, 1),
+            blurRadius: 2,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Gets the background color based on task priority
+  Color _getTaskBackgroundColor() {
+    if (task.priority == TaskPriority.none) {
+      return AppTheme.surfaceGrey;
+    }
+    
+    // Add more subtle tint for priority tasks - enhanced for better visual hierarchy
+    return Color.alphaBlend(
+      task.priorityColor.withValues(alpha: 0.06),
+      AppTheme.surfaceGrey,
+    );
+  }
+
+  /// Gets the border color based on task priority
+  Color _getTaskBorderColor() {
+    if (task.priority == TaskPriority.none) {
+      return AppTheme.borderWhite;
+    }
+    
+    // Enhanced subtle border color blend for better visual distinction
+    return Color.alphaBlend(
+      task.priorityColor.withValues(alpha: 0.12),
+      AppTheme.borderWhite,
     );
   }
 
