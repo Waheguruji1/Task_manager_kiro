@@ -770,12 +770,38 @@ class DatabaseService {
       id: achievementData.id,
       title: achievementData.title,
       description: achievementData.description,
-      icon: IconData(achievementData.iconCodePoint, fontFamily: 'MaterialIcons'),
+      icon: _getIconFromCodePoint(achievementData.iconCodePoint),
       type: achievementData.type,
       targetValue: achievementData.targetValue,
       isEarned: achievementData.isEarned,
       earnedAt: achievementData.earnedAt,
       currentProgress: achievementData.currentProgress,
     );
+  }
+
+  /// Get IconData from code point - tree-shake friendly
+  IconData _getIconFromCodePoint(int codePoint) {
+    // Map common achievement icon code points to Material Icons constants
+    switch (codePoint) {
+      case 0xe838: // Icons.star.codePoint
+        return Icons.star;
+      case 0xe1e1: // Icons.local_fire_department.codePoint
+        return Icons.local_fire_department;
+      case 0xe24e: // Icons.emoji_events.codePoint
+        return Icons.emoji_events;
+      case 0xe040: // Icons.repeat.codePoint
+        return Icons.repeat;
+      case 0xe1a5: // Icons.flash_on.codePoint
+        return Icons.flash_on;
+      case 0xe5ca: // Icons.check_circle.codePoint
+        return Icons.check_circle;
+      case 0xe8d0: // Icons.stars.codePoint
+        return Icons.stars;
+      case 0xe8e5: // Icons.trending_up.codePoint
+        return Icons.trending_up;
+      default:
+        // Fallback to star icon for unknown code points
+        return Icons.star;
+    }
   }
 }
