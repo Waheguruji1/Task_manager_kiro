@@ -40,17 +40,10 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   
   late bool _isRoutine;
   TaskPriority _selectedPriority = TaskPriority.none;
-  String? _selectedNotificationOption;
-  DateTime? _customNotificationTime;
+  final _notificationTimeController = TextEditingController();
+  DateTime? _notificationTime;
   bool _isLoading = false;
   String? _errorMessage;
-
-  // Notification options
-  static const Map<String, String> _notificationOptions = {
-    '1hr': '1 hour before',
-    '2hr': '2 hours before',
-    'custom': 'Custom time',
-  };
 
   @override
   void initState() {
@@ -68,18 +61,8 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
       
       // Initialize notification settings if task has notification time
       if (widget.task!.notificationTime != null) {
-        final notificationTime = widget.task!.notificationTime!;
-        final now = DateTime.now();
-        final difference = notificationTime.difference(now);
-        
-        if (difference.inHours == 1) {
-          _selectedNotificationOption = '1hr';
-        } else if (difference.inHours == 2) {
-          _selectedNotificationOption = '2hr';
-        } else {
-          _selectedNotificationOption = 'custom';
-          _customNotificationTime = notificationTime;
-        }
+        _notificationTime = widget.task!.notificationTime!;
+        _notificationTimeController.text = TimeOfDay.fromDateTime(_notificationTime!).format(context);
       }
     } else {
       // Creating new task
@@ -91,6 +74,7 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   @override
   void dispose() {
     _titleController.dispose();
+    _notificationTimeController.dispose();
     super.dispose();
   }
 
@@ -99,30 +83,12 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
     return ValidationUtils.validateTaskTitle(value);
   }
 
-  /// Calculate notification time based on selected option
-  DateTime? _calculateNotificationTime() {
-    if (_selectedNotificationOption == null) return null;
-    
-    final now = DateTime.now();
-    
-    switch (_selectedNotificationOption) {
-      case '1hr':
-        return now.add(const Duration(hours: 1));
-      case '2hr':
-        return now.add(const Duration(hours: 2));
-      case 'custom':
-        return _customNotificationTime;
-      default:
-        return null;
-    }
-  }
-
-  /// Show time picker for custom notification time
-  Future<void> _showCustomTimePicker() async {
+  /// Show time picker for notification time
+  Future<void> _showNotificationTimePicker() async {
     final TimeOfDay? selectedTime = await showTimePicker(
       context: context,
-      initialTime: _customNotificationTime != null
-          ? TimeOfDay.fromDateTime(_customNotificationTime!)
+      initialTime: _notificationTime != null
+          ? TimeOfDay.fromDateTime(_notificationTime!)
           : TimeOfDay.now(),
       builder: (context, child) {
         return Theme(
@@ -155,7 +121,8 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
           : selectedDateTime;
 
       setState(() {
-        _customNotificationTime = finalDateTime;
+        _notificationTime = finalDateTime;
+        _notificationTimeController.text = selectedTime.format(context);
       });
     }
   }
@@ -197,7 +164,6 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
 
     try {
       final taskText = _titleController.text.trim();
-      final notificationTime = _calculateNotificationTime();
       
       // Get task state notifier from Riverpod provider
       final taskStateNotifier = await ref.read(asyncTaskStateNotifierProvider.future);
@@ -209,7 +175,7 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
           description: null, // No separate description field
           isRoutine: _isRoutine,
           priority: _isRoutine ? TaskPriority.none : _selectedPriority,
-          notificationTime: _isRoutine ? null : notificationTime,
+          notificationTime: _isRoutine ? null : _notificationTime,
           // Don't set notificationId here - TaskStateNotifier will handle it
         );
         
@@ -233,7 +199,7 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
           isRoutine: _isRoutine,
           createdAt: DateTime.now(),
           priority: _isRoutine ? TaskPriority.none : _selectedPriority,
-          notificationTime: _isRoutine ? null : notificationTime,
+          notificationTime: _isRoutine ? null : _notificationTime,
           // Don't set notificationId here - TaskStateNotifier will handle it
         );
         
@@ -286,7 +252,6 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
       backgroundColor: AppTheme.surfaceGrey,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
-        side: const BorderSide(color: AppTheme.borderWhite),
       ),
       child: Container(
         constraints: BoxConstraints(
@@ -318,8 +283,8 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                 hintText: 'Enter your task...',
                 validator: _validateTitle,
                 autofocus: true,
-                maxLines: 3,
-                minLines: 1,
+                maxLines: null,
+                minLines: 2,
               ),
               
               const SizedBox(height: AppTheme.spacingM),
@@ -331,9 +296,8 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                   vertical: AppTheme.spacingS,
                 ),
                 decoration: BoxDecoration(
-                  color: AppTheme.surfaceGrey,
+                  color: AppTheme.backgroundDark,
                   borderRadius: BorderRadius.circular(AppTheme.inputBorderRadius),
-                  border: Border.all(color: AppTheme.borderWhite, width: 1),
                 ),
                 child: Row(
                   children: [
@@ -353,29 +317,17 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                         ],
                       ),
                     ),
-                    Switch(
+                    Switch.adaptive(
                       value: _isRoutine,
                       onChanged: (value) {
                         setState(() {
                           _isRoutine = value;
                         });
                       },
-                      thumbColor: WidgetStateProperty.resolveWith<Color>(
-                        (Set<WidgetState> states) {
-                          if (states.contains(WidgetState.selected)) {
-                            return AppTheme.greyPrimary;
-                          }
-                          return AppTheme.secondaryText;
-                        },
-                      ),
-                      trackColor: WidgetStateProperty.resolveWith<Color>(
-                        (Set<WidgetState> states) {
-                          if (states.contains(WidgetState.selected)) {
-                            return AppTheme.greyPrimary.withValues(alpha: 0.5);
-                          }
-                          return AppTheme.borderWhite;
-                        },
-                      ),
+                      activeColor: AppTheme.greyPrimary,
+                      inactiveThumbColor: AppTheme.secondaryText,
+                      inactiveTrackColor: AppTheme.greyLight.withValues(alpha: 0.2),
+                      activeTrackColor: AppTheme.greyPrimary.withValues(alpha: 0.3),
                     ),
                   ],
                 ),
@@ -392,9 +344,8 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                     vertical: AppTheme.spacingS,
                   ),
                   decoration: BoxDecoration(
-                    color: AppTheme.surfaceGrey,
+                    color: AppTheme.backgroundDark,
                     borderRadius: BorderRadius.circular(AppTheme.inputBorderRadius),
-                    border: Border.all(color: AppTheme.borderWhite, width: 1),
                   ),
                   child: Row(
                     children: [
@@ -466,151 +417,76 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                 
                 const SizedBox(height: AppTheme.spacingM),
                 
-                // Notification Dropdown
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppTheme.spacingM,
-                    vertical: AppTheme.spacingS,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceGrey,
-                    borderRadius: BorderRadius.circular(AppTheme.inputBorderRadius),
-                    border: Border.all(color: AppTheme.borderWhite, width: 1),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Notification',
-                              style: AppTheme.bodyLarge,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _selectedNotificationOption != null
-                                  ? _notificationOptions[_selectedNotificationOption]!
-                                  : 'No reminder set',
-                              style: AppTheme.caption,
-                            ),
-                          ],
-                        ),
-                      ),
-                      DropdownButton<String>(
-                        value: _selectedNotificationOption,
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedNotificationOption = newValue;
-                            if (newValue == 'custom') {
-                              _showCustomTimePicker();
-                            }
-                          });
-                        },
-                        dropdownColor: AppTheme.surfaceGrey,
-                        style: AppTheme.bodyMedium,
-                        underline: Container(),
-                        icon: const Icon(
-                          Icons.keyboard_arrow_up,
-                          color: AppTheme.primaryText,
-                        ),
-                        isExpanded: false,
-                        alignment: AlignmentDirectional.centerEnd,
-                        menuMaxHeight: 200,
-                        borderRadius: BorderRadius.circular(AppTheme.inputBorderRadius),
-                        hint: Text(
-                          'None',
-                          style: AppTheme.bodyMedium.copyWith(
-                            color: AppTheme.secondaryText,
-                          ),
-                        ),
-                        items: [
-                          // None option
-                          DropdownMenuItem<String>(
-                            value: null,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.notifications_off,
-                                  color: AppTheme.secondaryText,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: AppTheme.spacingS),
-                                Text(
-                                  'No reminder',
-                                  style: AppTheme.bodyMedium.copyWith(
-                                    color: AppTheme.secondaryText,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          // Notification options
-                          ..._notificationOptions.entries.map((entry) {
-                            return DropdownMenuItem<String>(
-                              value: entry.key,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.notifications,
-                                    color: AppTheme.primaryText,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: AppTheme.spacingS),
-                                  Text(
-                                    entry.value,
-                                    style: AppTheme.bodyMedium,
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Custom time display
-                if (_selectedNotificationOption == 'custom' && _customNotificationTime != null) ...[
-                  const SizedBox(height: AppTheme.spacingS),
-                  Container(
+                // Simple Notification Time Input
+                GestureDetector(
+                  onTap: _showNotificationTimePicker,
+                  child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppTheme.spacingM,
-                      vertical: AppTheme.spacingS,
+                      vertical: AppTheme.spacingM,
                     ),
                     decoration: BoxDecoration(
-                      color: AppTheme.greyDark,
+                      color: AppTheme.backgroundDark,
                       borderRadius: BorderRadius.circular(AppTheme.inputBorderRadius),
-                      border: Border.all(color: AppTheme.borderWhite.withValues(alpha: 0.3), width: 1),
                     ),
                     child: Row(
                       children: [
-                        const Icon(
-                          Icons.schedule,
-                          color: AppTheme.secondaryText,
-                          size: 16,
+                        Icon(
+                          Icons.notifications_outlined,
+                          color: AppTheme.greyPrimary,
+                          size: 20,
                         ),
-                        const SizedBox(width: AppTheme.spacingS),
-                        Text(
-                          'Reminder at ${TimeOfDay.fromDateTime(_customNotificationTime!).format(context)}',
-                          style: AppTheme.caption,
-                        ),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: _showCustomTimePicker,
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppTheme.primaryText,
-                            padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingS),
+                        const SizedBox(width: AppTheme.spacingM),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Notification Time',
+                                style: AppTheme.bodyMedium.copyWith(
+                                  color: AppTheme.primaryText,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _notificationTime != null
+                                    ? 'Remind me at ${TimeOfDay.fromDateTime(_notificationTime!).format(context)}'
+                                    : 'Tap to set reminder time',
+                                style: AppTheme.caption.copyWith(
+                                  color: _notificationTime != null 
+                                      ? AppTheme.greyPrimary 
+                                      : AppTheme.secondaryText,
+                                ),
+                              ),
+                            ],
                           ),
-                          child: const Text('Change'),
                         ),
+                        if (_notificationTime != null)
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _notificationTime = null;
+                                _notificationTimeController.clear();
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: AppTheme.secondaryText.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.close,
+                                size: 16,
+                                color: AppTheme.secondaryText,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
-                ],
+                ),
               ],
               
               // Error Message

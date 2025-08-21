@@ -9,25 +9,25 @@ class AppTheme {
   // Private constructor to prevent instantiation
   AppTheme._();
 
-  // Color Palette
-  static const Color backgroundDark = Color(0xFF121212);
-  static const Color surfaceGrey = Color(0xFF2A2A2A);
+  // Color Palette - Strictly Black Background
+  static const Color backgroundDark = Color(0xFF000000);
+  static const Color surfaceGrey = Color(0xFF1C1C1E);
   
   // Text Colors
   static const Color primaryText = Color(0xFFFFFFFF);
-  static const Color secondaryText = Color(0xFFE0E0E0);
-  static const Color disabledText = Color(0xFF9E9E9E);
+  static const Color secondaryText = Color(0xFF8E8E93);
+  static const Color disabledText = Color(0xFF636366);
   
-  // Accent Colors
-  static const Color greyPrimary = Color(0xFF4A4A4A);
-  static const Color greyLight = Color(0xFF6A6A6A);
-  static const Color greyDark = Color(0xFF2A2A2A);
+  // Accent Colors - App Theme Style
+  static const Color greyPrimary = Color(0xFF6B7280);
+  static const Color greyLight = Color(0xFF9CA3AF);
+  static const Color greyDark = Color(0xFF374151);
   static const Color purplePrimary = Color(0xFF8B5CF6);
   
-  // UI Element Colors
-  static const Color borderWhite = Color(0xFFFFFFFF);
+  // UI Element Colors - No Borders
+  static const Color borderWhite = Colors.transparent;
   static const Color iconPrimary = Color(0xFFFFFFFF);
-  static const Color iconBackground = Color(0xFF4A4A4A);
+  static const Color iconBackground = Color(0xFF48484A);
 
   // Font Family
   static const String primaryFontFamily = 'Sour Gummy';
@@ -136,69 +136,65 @@ class AppTheme {
         titleSmall: bodyMedium,
       ),
 
-      // Card Theme
+      // Card Theme - iOS Style
       cardTheme: CardThemeData(
         color: surfaceGrey,
-        elevation: taskContainerElevation,
+        elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(containerBorderRadius),
-          side: const BorderSide(
-            color: borderWhite,
-            width: 1,
-          ),
         ),
         margin: const EdgeInsets.symmetric(vertical: containerMargin),
       ),
 
-      // Elevated Button Theme
+      // Elevated Button Theme - iOS Style
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: greyPrimary,
           foregroundColor: primaryText,
-          elevation: buttonElevation,
+          elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(buttonBorderRadius),
-            side: const BorderSide(color: borderWhite, width: 2),
           ),
           padding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 8,
+            horizontal: 16,
+            vertical: 12,
           ),
           textStyle: bodyLarge,
         ),
       ),
 
-      // Outlined Button Theme
+      // Outlined Button Theme - iOS Style
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: primaryText,
-          side: const BorderSide(color: borderWhite, width: 2),
+          backgroundColor: surfaceGrey,
+          side: BorderSide.none,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(buttonBorderRadius),
           ),
           padding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 8,
+            horizontal: 16,
+            vertical: 12,
           ),
           textStyle: bodyLarge,
         ),
       ),
 
-      // Input Decoration Theme
+      // Input Decoration Theme - iOS Style
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surfaceGrey,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(inputBorderRadius),
-          borderSide: const BorderSide(color: borderWhite),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(inputBorderRadius),
-          borderSide: const BorderSide(color: borderWhite, width: 2),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(inputBorderRadius),
-          borderSide: const BorderSide(color: borderWhite, width: 2),
+          borderSide: BorderSide(color: greyPrimary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(inputBorderRadius),
@@ -214,11 +210,11 @@ class AppTheme {
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: spacingM,
-          vertical: spacingS,
+          vertical: spacingM,
         ),
       ),
 
-      // Checkbox Theme
+      // Checkbox Theme - iOS Style
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith<Color>((states) {
           if (states.contains(WidgetState.selected)) {
@@ -227,9 +223,9 @@ class AppTheme {
           return Colors.transparent;
         }),
         checkColor: WidgetStateProperty.all(primaryText),
-        side: const BorderSide(color: borderWhite, width: 2),
+        side: BorderSide(color: greyLight, width: 1.5),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(6),
         ),
       ),
 
@@ -260,22 +256,21 @@ class AppTheme {
         elevation: buttonElevation,
       ),
 
-      // Dialog Theme
+      // Dialog Theme - iOS Style
       dialogTheme: DialogThemeData(
         backgroundColor: surfaceGrey,
-        elevation: 4,
+        elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(containerBorderRadius),
-          side: const BorderSide(color: borderWhite),
         ),
         titleTextStyle: headingMedium,
         contentTextStyle: bodyMedium,
       ),
 
-      // Divider Theme
-      dividerTheme: const DividerThemeData(
-        color: borderWhite,
-        thickness: 1,
+      // Divider Theme - iOS Style
+      dividerTheme: DividerThemeData(
+        color: greyLight.withValues(alpha: 0.3),
+        thickness: 0.5,
         space: spacingM,
       ),
     );
@@ -283,67 +278,40 @@ class AppTheme {
 
   /// Custom component styles that can be used throughout the app
   
-  /// Task Container Decoration
+  /// Task Container Decoration - iOS Style, No Borders
   static BoxDecoration get taskContainerDecoration => BoxDecoration(
     color: surfaceGrey,
     borderRadius: BorderRadius.circular(containerBorderRadius),
-    border: Border.all(color: borderWhite, width: 1),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.1),
-        offset: const Offset(0, 2),
-        blurRadius: 4,
-      ),
-    ],
   );
 
-  /// Primary Button Decoration
+  /// Primary Button Decoration - iOS Style
   static BoxDecoration get primaryButtonDecoration => BoxDecoration(
     color: greyPrimary,
     borderRadius: BorderRadius.circular(buttonBorderRadius),
-    border: Border.all(color: borderWhite, width: 2),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.08),
-        offset: const Offset(0, 1),
-        blurRadius: 2,
-      ),
-    ],
   );
 
-  /// Secondary Button Decoration
+  /// Secondary Button Decoration - iOS Style
   static BoxDecoration get secondaryButtonDecoration => BoxDecoration(
-    color: Colors.transparent,
+    color: surfaceGrey,
     borderRadius: BorderRadius.circular(buttonBorderRadius),
-    border: Border.all(color: borderWhite, width: 2),
   );
 
-  /// Plus Icon Button Decoration
+  /// Plus Icon Button Decoration - iOS Style
   static BoxDecoration get plusIconDecoration => BoxDecoration(
     color: greyPrimary,
     shape: BoxShape.circle,
-    border: Border.all(color: borderWhite, width: 2),
   );
 
-  /// Routine Task Label Decoration
+  /// Routine Task Label Decoration - iOS Style
   static BoxDecoration get routineTaskLabelDecoration => BoxDecoration(
     color: greyPrimary.withValues(alpha: 0.15),
     borderRadius: BorderRadius.circular(6),
-    border: Border.all(color: borderWhite.withValues(alpha: 0.4), width: 1),
   );
 
-  /// Enhanced Button Decoration with subtle shadow
+  /// Enhanced Button Decoration - iOS Style
   static BoxDecoration get enhancedButtonDecoration => BoxDecoration(
-    color: greyPrimary.withValues(alpha: 0.1),
+    color: surfaceGrey,
     borderRadius: BorderRadius.circular(buttonBorderRadius),
-    border: Border.all(color: borderWhite.withValues(alpha: 0.3), width: 1),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.05),
-        offset: const Offset(0, 1),
-        blurRadius: 2,
-      ),
-    ],
   );
 
   /// Priority High Color (Purple)

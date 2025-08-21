@@ -246,8 +246,6 @@ class TaskStateNotifier extends StateNotifier<TaskState> {
   /// Toggle task completion status
   Future<bool> toggleTaskCompletion(int taskId) async {
     try {
-      state = state.copyWith(isLoading: true, error: null);
-      
       // Get the task to check its current completion status and notification
       Task? taskToToggle;
       try {
@@ -255,12 +253,45 @@ class TaskStateNotifier extends StateNotifier<TaskState> {
       } catch (e) {
         ErrorHandler.logError(e, context: 'Get task for completion toggle', type: ErrorType.database);
       }
+
+      if (taskToToggle == null) {
+        state = state.copyWith(error: 'Task not found');
+        return false;
+      }
+
+      // Optimistically update the UI first for immediate feedback
+      final updatedTask = taskToToggle.copyWith(
+        isCompleted: !taskToToggle.isCompleted,
+        completedAt: !taskToToggle.isCompleted ? DateTime.now() : null,
+      );
+
+      // Update the state immediately
+      final updatedEverydayTasks = state.everydayTasks.map((task) {
+        if (task.id == taskId) return updatedTask;
+        return task;
+      }).toList();
+
+      final updatedRoutineTasks = state.routineTasks.map((task) {
+        if (task.id == taskId) return updatedTask;
+        return task;
+      }).toList();
+
+      // Sort tasks by priority after update
+      final sortedEverydayTasks = Task.sortByPriority(updatedEverydayTasks);
+      final sortedRoutineTasks = Task.sortByPriority(updatedRoutineTasks);
+
+      state = state.copyWith(
+        everydayTasks: sortedEverydayTasks,
+        routineTasks: sortedRoutineTasks,
+        error: null,
+      );
       
+      // Now perform the database update in the background
       final success = await _databaseService.toggleTaskCompletion(taskId);
       
       if (success) {
         // Handle notification cancellation when task is completed
-        if (taskToToggle != null && !taskToToggle.isCompleted && taskToToggle.notificationId != null) {
+        if (!taskToToggle.isCompleted && taskToToggle.notificationId != null) {
           try {
             await _notificationService.initialize();
             await _notificationService.cancelTaskNotification(taskToToggle.notificationId!);
@@ -270,22 +301,22 @@ class TaskStateNotifier extends StateNotifier<TaskState> {
           }
         }
         
-        // Reload tasks to get the updated list
-        await loadTasks();
-        
         // Check and update achievements after task completion toggle
         // This is especially important for streak and daily completion achievements
         await _checkAndUpdateAchievements();
         
         return true;
+      } else {
+        // If database update failed, revert the optimistic update
+        await loadTasks();
+        state = state.copyWith(error: 'Failed to toggle task completion');
+        return false;
       }
-      
-      state = state.copyWith(isLoading: false, error: 'Failed to toggle task completion');
-      return false;
     } catch (e) {
+      // If any error occurs, reload tasks to ensure consistency
+      await loadTasks();
       ErrorHandler.logError(e, context: 'Toggle task completion', type: ErrorType.database);
       state = state.copyWith(
-        isLoading: false,
         error: 'Failed to toggle task completion: ${e.toString()}',
       );
       return false;

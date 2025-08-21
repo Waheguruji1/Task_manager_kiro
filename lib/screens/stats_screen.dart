@@ -4,29 +4,29 @@ import '../utils/theme.dart';
 import '../utils/responsive.dart';
 import '../providers/providers.dart';
 import '../models/task.dart';
-import '../models/achievement.dart';
-import '../widgets/heatmap_widget.dart';
-import '../widgets/achievement_widget.dart';
 
-/// Stats Screen Widget
+/// Stats Screen Widget - Redesigned with focused data display
 /// 
-/// Displays task statistics, productivity insights, heatmaps, and achievements
-class StatsScreen extends ConsumerWidget {
+/// Shows only essential statistics: weekly completed tasks, today's tasks,
+/// completion percentage with modern progress bar, and monthly heatmap
+class StatsScreen extends ConsumerStatefulWidget {
   const StatsScreen({super.key});
 
-  /// Calculate task statistics
-  Map<String, dynamic> _calculateStats(List<Task> allTasks) {
+  @override
+  ConsumerState<StatsScreen> createState() => _StatsScreenState();
+}
+
+class _StatsScreenState extends ConsumerState<StatsScreen> {
+  int _selectedMonth = DateTime.now().month;
+  int _selectedYear = DateTime.now().year;
+
+  /// Calculate focused statistics
+  Map<String, dynamic> _calculateFocusedStats(List<Task> allTasks) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final thisWeek = today.subtract(Duration(days: today.weekday - 1));
+    final thisWeekStart = today.subtract(Duration(days: today.weekday - 1));
 
-    // Basic counts
-    final totalTasks = allTasks.length;
-    final completedTasks = allTasks.where((task) => task.isCompleted).length;
-    final routineTasks = allTasks.where((task) => task.isRoutine).length;
-    final everydayTasks = allTasks.where((task) => !task.isRoutine).length;
-
-    // Time-based stats
+    // Today's tasks
     final todayTasks = allTasks.where((task) {
       final taskDate = DateTime(
         task.createdAt.year,
@@ -34,308 +34,48 @@ class StatsScreen extends ConsumerWidget {
         task.createdAt.day,
       );
       return taskDate.isAtSameMomentAs(today);
-    }).length;
+    }).toList();
 
-    final thisWeekTasks = allTasks.where((task) {
-      final taskDate = DateTime(
-        task.createdAt.year,
-        task.createdAt.month,
-        task.createdAt.day,
-      );
-      return taskDate.isAfter(thisWeek.subtract(const Duration(days: 1)));
-    }).length;
+    final todayCompleted = todayTasks.where((task) => task.isCompleted).length;
+    final todayUncompleted = todayTasks.length - todayCompleted;
 
-    final thisMonthTasks = allTasks.where((task) {
-      return task.createdAt.year == now.year && task.createdAt.month == now.month;
-    }).length;
-
-    // Completion stats
-    final completedToday = allTasks.where((task) {
+    // This week's completed tasks
+    final weeklyCompleted = allTasks.where((task) {
       if (!task.isCompleted || task.completedAt == null) return false;
       final completedDate = DateTime(
         task.completedAt!.year,
         task.completedAt!.month,
         task.completedAt!.day,
       );
-      return completedDate.isAtSameMomentAs(today);
+      return completedDate.isAfter(thisWeekStart.subtract(const Duration(days: 1))) &&
+             completedDate.isBefore(today.add(const Duration(days: 1)));
     }).length;
 
-    final completedThisWeek = allTasks.where((task) {
-      if (!task.isCompleted || task.completedAt == null) return false;
-      final completedDate = DateTime(
-        task.completedAt!.year,
-        task.completedAt!.month,
-        task.completedAt!.day,
-      );
-      return completedDate.isAfter(thisWeek.subtract(const Duration(days: 1)));
-    }).length;
-
-    // Calculate completion rate
-    final completionRate = totalTasks > 0 ? (completedTasks / totalTasks * 100) : 0.0;
+    // Overall completion percentage
+    final totalTasks = allTasks.length;
+    final completedTasks = allTasks.where((task) => task.isCompleted).length;
+    final completionPercentage = totalTasks > 0 ? (completedTasks / totalTasks * 100) : 0.0;
 
     return {
-      'totalTasks': totalTasks,
-      'completedTasks': completedTasks,
-      'routineTasks': routineTasks,
-      'everydayTasks': everydayTasks,
-      'todayTasks': todayTasks,
-      'thisWeekTasks': thisWeekTasks,
-      'thisMonthTasks': thisMonthTasks,
-      'completedToday': completedToday,
-      'completedThisWeek': completedThisWeek,
-      'completionRate': completionRate,
+      'todayCompleted': todayCompleted,
+      'todayUncompleted': todayUncompleted,
+      'weeklyCompleted': weeklyCompleted,
+      'completionPercentage': completionPercentage,
     };
   }
 
-  /// Build completion heatmap tooltip
-  Widget _buildCompletionTooltip(DateTime date, dynamic value) {
-    final count = value as int? ?? 0;
-    final dateStr = '${date.day}/${date.month}/${date.year}';
-    
-    return Text(
-      '$dateStr\n$count tasks completed',
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 12,
-      ),
-      textAlign: TextAlign.center,
-    );
-  }
-
-  /// Build creation vs completion heatmap tooltip
-  Widget _buildCreationCompletionTooltip(DateTime date, dynamic value) {
-    final data = value as Map<String, int>? ?? {'created': 0, 'completed': 0};
-    final created = data['created'] ?? 0;
-    final completed = data['completed'] ?? 0;
-    final dateStr = '${date.day}/${date.month}/${date.year}';
-    
-    return Text(
-      '$dateStr\n$created created, $completed completed',
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 12,
-      ),
-      textAlign: TextAlign.center,
-    );
-  }
-
-  /// Build heatmap section
-  Widget _buildHeatmapSection({
-    required String title,
-    required Widget heatmapWidget,
-    required bool isLoading,
-    String? errorMessage,
-    VoidCallback? onRetry,
-  }) {
-    return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: AppTheme.spacingM,
-        vertical: AppTheme.spacingS,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppTheme.spacingM),
-            child: Text(
-              title,
-              style: AppTheme.headingMedium.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          if (isLoading)
-            Container(
-              height: 200,
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceGrey,
-                borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
-                border: Border.all(color: AppTheme.borderWhite),
-              ),
-              child: const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.greyPrimary),
-                ),
-              ),
-            )
-          else if (errorMessage != null)
-            Container(
-              height: 200,
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceGrey,
-                borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
-                border: Border.all(color: AppTheme.borderWhite),
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: Colors.red.shade400,
-                    ),
-                    const SizedBox(height: AppTheme.spacingM),
-                    Text(
-                      errorMessage,
-                      style: AppTheme.bodyMedium.copyWith(
-                        color: AppTheme.secondaryText,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    if (onRetry != null) ...[
-                      const SizedBox(height: AppTheme.spacingM),
-                      ElevatedButton.icon(
-                        onPressed: onRetry,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.greyPrimary,
-                          foregroundColor: AppTheme.primaryText,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            )
-          else
-            heatmapWidget,
-        ],
-      ),
-    );
-  }
-
-  /// Build achievements section
-  Widget _buildAchievementsSection(List<Achievement> achievements) {
-    if (achievements.isEmpty) {
-      return Container(
-        margin: const EdgeInsets.symmetric(
-          horizontal: AppTheme.spacingM,
-          vertical: AppTheme.spacingS,
-        ),
-        padding: const EdgeInsets.all(AppTheme.spacingL),
-        decoration: BoxDecoration(
-          color: AppTheme.surfaceGrey,
-          borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
-          border: Border.all(color: AppTheme.borderWhite),
-        ),
-        child: Center(
-          child: Column(
-            children: [
-              Icon(
-                Icons.emoji_events_outlined,
-                size: 48,
-                color: AppTheme.secondaryText,
-              ),
-              const SizedBox(height: AppTheme.spacingM),
-              Text(
-                'No achievements yet',
-                style: AppTheme.bodyLarge.copyWith(
-                  color: AppTheme.secondaryText,
-                ),
-              ),
-              const SizedBox(height: AppTheme.spacingS),
-              Text(
-                'Complete tasks to unlock achievements!',
-                style: AppTheme.bodyMedium.copyWith(
-                  color: AppTheme.disabledText,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
+  /// Get progress bar color based on completion percentage
+  Color _getProgressColor(double percentage) {
+    if (percentage >= 70) {
+      return Colors.green;
+    } else if (percentage >= 40) {
+      return Colors.orange;
+    } else {
+      return Colors.red;
     }
-
-    // Separate earned and unearned achievements
-    final earnedAchievements = achievements.where((a) => a.isEarned).toList();
-    final unearnedAchievements = achievements.where((a) => !a.isEarned).toList();
-
-    return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: AppTheme.spacingM,
-        vertical: AppTheme.spacingS,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppTheme.spacingM),
-            child: Row(
-              children: [
-                Text(
-                  'Achievements',
-                  style: AppTheme.headingMedium.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(width: AppTheme.spacingS),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppTheme.spacingS,
-                    vertical: AppTheme.spacingXS,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.purplePrimary,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${earnedAchievements.length}/${achievements.length}',
-                    style: AppTheme.caption.copyWith(
-                      color: AppTheme.primaryText,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Earned achievements
-          if (earnedAchievements.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppTheme.spacingS),
-              child: Text(
-                'Earned (${earnedAchievements.length})',
-                style: AppTheme.bodyLarge.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: AppTheme.purplePrimary,
-                ),
-              ),
-            ),
-            ...earnedAchievements.map((achievement) => AchievementWidget(
-              achievement: achievement,
-              isEarned: true,
-            )),
-            const SizedBox(height: AppTheme.spacingM),
-          ],
-          
-          // Unearned achievements
-          if (unearnedAchievements.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppTheme.spacingS),
-              child: Text(
-                'In Progress (${unearnedAchievements.length})',
-                style: AppTheme.bodyLarge.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: AppTheme.secondaryText,
-                ),
-              ),
-            ),
-            ...unearnedAchievements.map((achievement) => AchievementWidget(
-              achievement: achievement,
-              isEarned: false,
-              progress: achievement.progressPercentage,
-            )),
-          ],
-        ],
-      ),
-    );
   }
 
-  /// Build stat card
+  /// Build modern stat card
   Widget _buildStatCard({
     required String title,
     required String value,
@@ -344,18 +84,10 @@ class StatsScreen extends ConsumerWidget {
     String? subtitle,
   }) {
     return Container(
-      padding: const EdgeInsets.all(AppTheme.spacingM),
+      padding: const EdgeInsets.all(AppTheme.spacingL),
       decoration: BoxDecoration(
         color: AppTheme.surfaceGrey,
-        borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
-        border: Border.all(color: AppTheme.borderWhite),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            offset: const Offset(0, 2),
-            blurRadius: 4,
-          ),
-        ],
+        borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius + 2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -365,40 +97,41 @@ class StatsScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(AppTheme.spacingS),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   icon,
                   color: color,
-                  size: 20,
+                  size: 24,
                 ),
               ),
-              const SizedBox(width: AppTheme.spacingS),
+              const SizedBox(width: AppTheme.spacingM),
               Expanded(
                 child: Text(
                   title,
-                  style: AppTheme.bodyMedium.copyWith(
-                    color: AppTheme.secondaryText,
-                    fontWeight: FontWeight.w500,
+                  style: AppTheme.bodyLarge.copyWith(
+                    color: AppTheme.primaryText,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppTheme.spacingM),
+          const SizedBox(height: AppTheme.spacingL),
           Text(
             value,
             style: AppTheme.headingLarge.copyWith(
               fontWeight: FontWeight.w700,
-              color: color,
+              color: AppTheme.primaryText,
+              fontSize: 32,
             ),
           ),
           if (subtitle != null) ...[
             const SizedBox(height: AppTheme.spacingXS),
             Text(
               subtitle,
-              style: AppTheme.caption.copyWith(
+              style: AppTheme.bodyMedium.copyWith(
                 color: AppTheme.secondaryText,
               ),
             ),
@@ -408,19 +141,18 @@ class StatsScreen extends ConsumerWidget {
     );
   }
 
-  /// Build progress indicator
-  Widget _buildProgressIndicator({
+  /// Build modern boxy progress bar
+  Widget _buildProgressBar({
     required String title,
-    required double progress,
-    required Color color,
-    required String label,
+    required double percentage,
   }) {
+    final color = _getProgressColor(percentage);
+    
     return Container(
-      padding: const EdgeInsets.all(AppTheme.spacingM),
+      padding: const EdgeInsets.all(AppTheme.spacingL),
       decoration: BoxDecoration(
         color: AppTheme.surfaceGrey,
-        borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
-        border: Border.all(color: AppTheme.borderWhite),
+        borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius + 2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -432,25 +164,148 @@ class StatsScreen extends ConsumerWidget {
                 title,
                 style: AppTheme.bodyLarge.copyWith(
                   fontWeight: FontWeight.w600,
+                  color: AppTheme.primaryText,
                 ),
               ),
-              Text(
-                label,
-                style: AppTheme.bodyMedium.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w600,
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.spacingM,
+                  vertical: AppTheme.spacingS,
+                ),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${percentage.toInt()}%',
+                  style: AppTheme.bodyLarge.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
           ),
+          const SizedBox(height: AppTheme.spacingL),
+          Container(
+            height: 12,
+            decoration: BoxDecoration(
+              color: AppTheme.greyLight.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: percentage / 100,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build month selector
+  Widget _buildMonthSelector() {
+    final months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.spacingM),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceGrey,
+        borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius + 2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Activity Heatmap',
+            style: AppTheme.headingMedium.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppTheme.primaryText,
+            ),
+          ),
           const SizedBox(height: AppTheme.spacingM),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: AppTheme.borderWhite,
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-              minHeight: 8,
+          
+          // Month selector
+          SizedBox(
+            height: 40,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: 12,
+              itemBuilder: (context, index) {
+                final month = index + 1;
+                final isSelected = month == _selectedMonth;
+                
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedMonth = month;
+                    });
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(right: AppTheme.spacingS),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.spacingM,
+                      vertical: AppTheme.spacingS,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected 
+                          ? AppTheme.greyPrimary 
+                          : AppTheme.greyLight.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      months[index],
+                      style: AppTheme.bodyMedium.copyWith(
+                        color: isSelected 
+                            ? AppTheme.primaryText 
+                            : AppTheme.secondaryText,
+                        fontWeight: isSelected 
+                            ? FontWeight.w600 
+                            : FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          
+          const SizedBox(height: AppTheme.spacingL),
+          
+          // Simple heatmap placeholder (you can implement actual heatmap here)
+          Container(
+            height: 120,
+            decoration: BoxDecoration(
+              color: AppTheme.backgroundDark,
+              borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.calendar_view_month,
+                    size: 32,
+                    color: AppTheme.secondaryText,
+                  ),
+                  const SizedBox(height: AppTheme.spacingS),
+                  Text(
+                    'Heatmap for ${months[_selectedMonth - 1]} $_selectedYear',
+                    style: AppTheme.bodyMedium.copyWith(
+                      color: AppTheme.secondaryText,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -459,7 +314,7 @@ class StatsScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final allTasksAsync = ref.watch(allTasksProvider);
     final responsivePadding = ResponsiveUtils.getScreenPadding(context);
 
@@ -500,113 +355,44 @@ class StatsScreen extends ConsumerWidget {
                 // Stats Content
                 allTasksAsync.when(
                   data: (tasks) {
-                    final stats = _calculateStats(tasks);
+                    final stats = _calculateFocusedStats(tasks);
                     
                     return Column(
                       children: [
-                        // Overview Stats
-                        GridView.count(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          crossAxisCount: 2,
-                          crossAxisSpacing: AppTheme.spacingM,
-                          mainAxisSpacing: AppTheme.spacingM,
-                          childAspectRatio: 1.2,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppTheme.spacingM,
-                          ),
-                          children: [
-                            _buildStatCard(
-                              title: 'Total Tasks',
-                              value: '${stats['totalTasks']}',
-                              icon: Icons.task_alt,
-                              color: AppTheme.greyPrimary,
-                            ),
-                            _buildStatCard(
-                              title: 'Completed',
-                              value: '${stats['completedTasks']}',
-                              icon: Icons.check_circle,
-                              color: Colors.green,
-                            ),
-                            _buildStatCard(
-                              title: 'Routine Tasks',
-                              value: '${stats['routineTasks']}',
-                              icon: Icons.repeat,
-                              color: AppTheme.purplePrimary,
-                            ),
-                            _buildStatCard(
-                              title: 'Today',
-                              value: '${stats['completedToday']}',
-                              icon: Icons.today,
-                              color: Colors.blue,
-                              subtitle: 'completed today',
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: AppTheme.spacingL),
-
-                        // Progress Section
+                        // Weekly and Today's Stats
                         Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppTheme.spacingM,
                           ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Progress',
-                                style: AppTheme.headingMedium.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              _buildStatCard(
+                                title: 'Completed This Week',
+                                value: '${stats['weeklyCompleted']}',
+                                icon: Icons.calendar_view_week,
+                                color: AppTheme.greyPrimary,
+                                subtitle: 'tasks completed',
                               ),
+                              
                               const SizedBox(height: AppTheme.spacingM),
-                              _buildProgressIndicator(
-                                title: 'Overall Completion',
-                                progress: stats['completionRate'] / 100,
-                                color: Colors.green,
-                                label: '${stats['completionRate'].toStringAsFixed(1)}%',
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: AppTheme.spacingL),
-
-                        // Time-based Stats
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppTheme.spacingM,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Activity',
-                                style: AppTheme.headingMedium.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: AppTheme.spacingM),
+                              
                               Row(
                                 children: [
                                   Expanded(
                                     child: _buildStatCard(
-                                      title: 'This Week',
-                                      value: '${stats['completedThisWeek']}',
-                                      icon: Icons.date_range,
-                                      color: Colors.orange,
-                                      subtitle: 'completed',
+                                      title: 'Completed Today',
+                                      value: '${stats['todayCompleted']}',
+                                      icon: Icons.check_circle,
+                                      color: Colors.green,
                                     ),
                                   ),
                                   const SizedBox(width: AppTheme.spacingM),
                                   Expanded(
                                     child: _buildStatCard(
-                                      title: 'This Month',
-                                      value: '${stats['thisMonthTasks']}',
-                                      icon: Icons.calendar_month,
-                                      color: Colors.purple,
-                                      subtitle: 'created',
+                                      title: 'Remaining Today',
+                                      value: '${stats['todayUncompleted']}',
+                                      icon: Icons.pending,
+                                      color: Colors.orange,
                                     ),
                                   ),
                                 ],
@@ -615,199 +401,44 @@ class StatsScreen extends ConsumerWidget {
                           ),
                         ),
 
-                        const SizedBox(height: AppTheme.spacingXL),
+                        const SizedBox(height: AppTheme.spacingL),
 
-                        // Task Completion Activity Heatmap
-                        Consumer(
-                          builder: (context, ref, child) {
-                            final completionHeatmapAsync = ref.watch(completionHeatmapDataProvider);
-                            
-                            return completionHeatmapAsync.when(
-                              data: (heatmapData) => _buildHeatmapSection(
-                                title: 'Task Completion Activity',
-                                heatmapWidget: HeatmapWidget(
-                                  data: heatmapData,
-                                  baseColor: AppTheme.purplePrimary,
-                                  title: 'Daily Task Completions',
-                                  tooltipBuilder: _buildCompletionTooltip,
-                                  onCellTap: (date, value) {
-                                    // Optional: Handle cell tap for detailed view
-                                  },
-                                ),
-                                isLoading: false,
-                              ),
-                              loading: () => _buildHeatmapSection(
-                                title: 'Task Completion Activity',
-                                heatmapWidget: const SizedBox.shrink(),
-                                isLoading: true,
-                              ),
-                              error: (error, _) => _buildHeatmapSection(
-                                title: 'Task Completion Activity',
-                                heatmapWidget: const SizedBox.shrink(),
-                                isLoading: false,
-                                errorMessage: 'Failed to load completion heatmap',
-                                onRetry: () => ref.invalidate(completionHeatmapDataProvider),
-                              ),
-                            );
-                          },
+                        // Progress Bar
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppTheme.spacingM,
+                          ),
+                          child: _buildProgressBar(
+                            title: 'Overall Completion',
+                            percentage: stats['completionPercentage'],
+                          ),
                         ),
 
                         const SizedBox(height: AppTheme.spacingL),
 
-                        // Task Creation vs Completion Heatmap
-                        Consumer(
-                          builder: (context, ref, child) {
-                            final creationCompletionHeatmapAsync = ref.watch(creationCompletionHeatmapDataProvider);
-                            
-                            return creationCompletionHeatmapAsync.when(
-                              data: (heatmapData) => _buildHeatmapSection(
-                                title: 'Task Creation vs Completion',
-                                heatmapWidget: HeatmapWidget(
-                                  data: heatmapData,
-                                  baseColor: Colors.green,
-                                  title: 'Daily Task Creation & Completion',
-                                  tooltipBuilder: _buildCreationCompletionTooltip,
-                                  isMultiValue: true,
-                                  onCellTap: (date, value) {
-                                    // Optional: Handle cell tap for detailed view
-                                  },
-                                ),
-                                isLoading: false,
-                              ),
-                              loading: () => _buildHeatmapSection(
-                                title: 'Task Creation vs Completion',
-                                heatmapWidget: const SizedBox.shrink(),
-                                isLoading: true,
-                              ),
-                              error: (error, _) => _buildHeatmapSection(
-                                title: 'Task Creation vs Completion',
-                                heatmapWidget: const SizedBox.shrink(),
-                                isLoading: false,
-                                errorMessage: 'Failed to load creation vs completion heatmap',
-                                onRetry: () => ref.invalidate(creationCompletionHeatmapDataProvider),
-                              ),
-                            );
-                          },
-                        ),
-
-                        const SizedBox(height: AppTheme.spacingXL),
-
-                        // Achievements Section
-                        Consumer(
-                          builder: (context, ref, child) {
-                            final allAchievementsAsync = ref.watch(allAchievementsProvider);
-                            
-                            return allAchievementsAsync.when(
-                              data: (achievements) => _buildAchievementsSection(achievements),
-                              loading: () => Container(
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: AppTheme.spacingM,
-                                  vertical: AppTheme.spacingS,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.only(bottom: AppTheme.spacingM),
-                                      child: Text(
-                                        'Achievements',
-                                        style: AppTheme.headingMedium.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                    Container(
-                                      height: 200,
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.surfaceGrey,
-                                        borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
-                                        border: Border.all(color: AppTheme.borderWhite),
-                                      ),
-                                      child: const Center(
-                                        child: CircularProgressIndicator(
-                                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.greyPrimary),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              error: (error, _) => Container(
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: AppTheme.spacingM,
-                                  vertical: AppTheme.spacingS,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.only(bottom: AppTheme.spacingM),
-                                      child: Text(
-                                        'Achievements',
-                                        style: AppTheme.headingMedium.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.all(AppTheme.spacingL),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.surfaceGrey,
-                                        borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
-                                        border: Border.all(color: AppTheme.borderWhite),
-                                      ),
-                                      child: Center(
-                                        child: Column(
-                                          children: [
-                                            Icon(
-                                              Icons.error_outline,
-                                              size: 48,
-                                              color: Colors.red.shade400,
-                                            ),
-                                            const SizedBox(height: AppTheme.spacingM),
-                                            Text(
-                                              'Failed to load achievements',
-                                              style: AppTheme.bodyMedium.copyWith(
-                                                color: AppTheme.secondaryText,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                            const SizedBox(height: AppTheme.spacingM),
-                                            ElevatedButton.icon(
-                                              onPressed: () => ref.invalidate(allAchievementsProvider),
-                                              icon: const Icon(Icons.refresh),
-                                              label: const Text('Retry'),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: AppTheme.greyPrimary,
-                                                foregroundColor: AppTheme.primaryText,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
+                        // Heatmap Section
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppTheme.spacingM,
+                          ),
+                          child: _buildMonthSelector(),
                         ),
 
                         const SizedBox(height: AppTheme.spacingXL),
                       ],
                     );
                   },
-                  loading: () => const Padding(
-                    padding: EdgeInsets.all(AppTheme.spacingXL),
-                    child: Center(
+                  loading: () => const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(AppTheme.spacingXL),
                       child: CircularProgressIndicator(
                         valueColor: AlwaysStoppedAnimation<Color>(AppTheme.greyPrimary),
                       ),
                     ),
                   ),
-                  error: (error, _) => Padding(
-                    padding: const EdgeInsets.all(AppTheme.spacingL),
-                    child: Center(
+                  error: (error, _) => Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppTheme.spacingXL),
                       child: Column(
                         children: [
                           Icon(
@@ -824,7 +455,9 @@ class StatsScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: AppTheme.spacingM),
                           ElevatedButton.icon(
-                            onPressed: () => ref.invalidate(allTasksProvider),
+                            onPressed: () {
+                              ref.invalidate(allTasksProvider);
+                            },
                             icon: const Icon(Icons.refresh),
                             label: const Text('Retry'),
                             style: ElevatedButton.styleFrom(

@@ -281,7 +281,7 @@
   - Add proper icons and labels for each navigation item
   - _Requirements: 2, 15_
 
-- [ ] 34. Create comprehensive testing for new features
+- [x] 34. Create comprehensive testing for new features
   - Write unit tests for TaskPriority enum and Task model priority methods
   - Create unit tests for NotificationService scheduling and cancellation methods
   - Add unit tests for TaskCleanupService cleanup logic and date calculations
@@ -291,7 +291,7 @@
   - Test database migration and new field handling
   - _Requirements: 13, 14, 15, 16, 17_
 
-- [ ] 35. Final integration and testing of all features
+- [x] 35. Final integration and testing of all features
   - Integrate all new services with existing Riverpod providers
   - Test complete user workflows with priority, notifications, and cleanup
   - Perform end-to-end testing of task creation, editing, and management with new features
@@ -299,3 +299,46 @@
   - Test app performance with cleanup service and notification scheduling
   - Ensure all new features maintain app theme consistency and user experience
   - _Requirements: 13, 14, 15, 16, 17_
+
+- [x] 36. Redesign greeting and stats UI with modern layout
+- [x] 36.1 Update greeting message to always show "Good morning" with personalized username
+  - Change greeting to always display "Good morning" regardless of time
+  - Add proper spacing between username and exclamation mark
+  - Remove "You've got this" motivational line completely
+  - Adjust screen layout and spacing accordingly
+  - _Requirements: 2_
+
+- [x] 36.2 Add modern container padding and styling to task containers
+  - Add left and right padding to inner task containers
+  - Implement rounded edges for modern boxy design
+  - Ensure consistent spacing and visual hierarchy
+  - _Requirements: 5, 7_
+
+- [x] 36.3 Completely redesign stats screen with focused data display
+  - Remove unreliable and unnecessary data displays
+  - Show only: weekly completed tasks, today's completed/uncompleted tasks
+  - Remove routine task statistics and other clutter
+  - Create clean, minimal, and modern UI design
+  - _Requirements: 11, 12_
+
+- [x] 36.4 Implement modern progress bar with completion percentage
+  - Create boxy-design progress bar with percentage display
+  - Implement color-coded progress (low/medium/high completion rates)
+  - Show numerical percentage alongside visual progress bar
+  - Ensure modern, minimal design aligned with app theme
+  - _Requirements: 11_
+
+- [x] 36.5 Redesign heatmap display with month-specific container
+  - Create dedicated container for monthly heatmap display
+  - Add month selection controls within the container
+  - Show only current year's months with proper navigation
+  - Remove unnecessary "this week/month" activity displays
+  - Implement unique, modern, and minimal heatmap UI
+  - _Requirements: 11_
+
+- [x] 36.6 Fix icon visibility and contrast issues in stats UI
+  - Improve icon colors and visibility throughout stats screen
+  - Ensure proper contrast for all UI elements
+  - Update dark/disabled icons to be more visible
+  - Maintain consistency with iOS-style design theme
+  - _Requirements: 11, 12_

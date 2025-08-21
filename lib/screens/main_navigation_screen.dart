@@ -91,24 +91,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: AppTheme.surfaceGrey,
+          color: AppTheme.backgroundDark,
           border: Border(
             top: BorderSide(
-              color: AppTheme.borderWhite.withValues(alpha: 0.3),
+              color: AppTheme.greyLight.withValues(alpha: 0.1),
               width: 0.5,
             ),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              offset: const Offset(0, -2),
-              blurRadius: 8,
-            ),
-          ],
         ),
         child: SafeArea(
           child: SizedBox(
-            height: 60,
+            height: 50,
             child: BottomNavigationBar(
               currentIndex: _currentIndex,
               onTap: _onTabSelected,
@@ -116,18 +109,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               backgroundColor: Colors.transparent,
               elevation: 0,
               selectedItemColor: AppTheme.greyPrimary,
-              unselectedItemColor: AppTheme.secondaryText,
-              selectedFontSize: 12,
-              unselectedFontSize: 12,
-              iconSize: 24,
+              unselectedItemColor: AppTheme.secondaryText.withValues(alpha: 0.6),
+              selectedFontSize: 11,
+              unselectedFontSize: 11,
+              iconSize: 22,
               items: _navItems,
               selectedLabelStyle: const TextStyle(
                 fontWeight: FontWeight.w600,
                 fontFamily: 'SourGummy',
+                height: 1.2,
               ),
               unselectedLabelStyle: const TextStyle(
                 fontWeight: FontWeight.w400,
                 fontFamily: 'SourGummy',
+                height: 1.2,
               ),
             ),
           ),

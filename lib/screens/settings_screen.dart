@@ -8,7 +8,7 @@ import '../providers/providers.dart';
 import '../services/share_service.dart';
 
 /// Settings Screen Widget
-/// 
+///
 /// Provides app settings and user preferences management
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -31,9 +31,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     });
 
     try {
-      final prefsService = await ref.read(asyncPreferencesServiceProvider.future);
+      final prefsService =
+          await ref.read(asyncPreferencesServiceProvider.future);
       final dbService = await ref.read(asyncDatabaseServiceProvider.future);
-      
+
       // Clear all tasks
       final allTasks = await dbService.getAllTasks();
       for (final task in allTasks) {
@@ -41,12 +42,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           await dbService.deleteTask(task.id!);
         }
       }
-      
+
       // Clear user preferences
       await prefsService.clearUserData();
-      
+
       if (mounted) {
-        ErrorHandler.showSuccessSnackBar(context, 'All data cleared successfully');
+        ErrorHandler.showSuccessSnackBar(
+            context, 'All data cleared successfully');
         // Navigate back to welcome screen
         Navigator.of(context).pushNamedAndRemoveUntil(
           AppRoutes.welcome,
@@ -104,7 +106,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
     );
-    
+
     return result ?? false;
   }
 
@@ -131,22 +133,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     });
 
     try {
-      final prefsService = await ref.read(asyncPreferencesServiceProvider.future);
+      final prefsService =
+          await ref.read(asyncPreferencesServiceProvider.future);
       final notificationService = ref.read(notificationServiceProvider);
-      
+
       if (enabled) {
         // Request permission first
         final hasPermission = await notificationService.requestPermissions();
         if (!hasPermission) {
           if (mounted) {
             ErrorHandler.showErrorSnackBar(
-              context, 
+              context,
               'Notification permission denied. Please enable in device settings.',
             );
           }
           return;
         }
-        
+
         // Enable notifications and reschedule all
         await prefsService.setNotificationsEnabled(true);
         final allTasks = await ref.read(allTasksProvider.future);
@@ -163,7 +166,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       if (mounted) {
         ErrorHandler.showSuccessSnackBar(
-          context, 
+          context,
           AppStrings.notificationSettingsUpdated,
         );
       }
@@ -188,10 +191,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     try {
       final notificationService = ref.read(notificationServiceProvider);
       final hasPermission = await notificationService.requestPermissions();
-      
+
       // Refresh permission status
       ref.invalidate(notificationPermissionStatusProvider);
-      
+
       if (mounted) {
         if (hasPermission) {
           ErrorHandler.showSuccessSnackBar(
@@ -243,7 +246,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           decoration: BoxDecoration(
             color: AppTheme.surfaceGrey,
             borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
-            border: Border.all(color: AppTheme.borderWhite),
           ),
           child: Column(children: children),
         ),
@@ -273,7 +275,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(AppTheme.spacingS),
                 decoration: BoxDecoration(
-                  color: (iconColor ?? AppTheme.greyPrimary).withValues(alpha: 0.1),
+                  color: (iconColor ?? AppTheme.greyPrimary)
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -377,21 +380,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             )
           else
-            Switch(
+            Switch.adaptive(
               value: value,
               onChanged: onChanged,
-              thumbColor: WidgetStateProperty.resolveWith<Color>((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return AppTheme.greyPrimary;
-                }
-                return AppTheme.secondaryText;
-              }),
-              trackColor: WidgetStateProperty.resolveWith<Color>((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return AppTheme.greyPrimary.withValues(alpha: 0.5);
-                }
-                return AppTheme.secondaryText.withValues(alpha: 0.3);
-              }),
+              activeColor: AppTheme.greyPrimary,
+              inactiveThumbColor: AppTheme.secondaryText,
+              inactiveTrackColor: AppTheme.greyLight.withValues(alpha: 0.2),
+              activeTrackColor: AppTheme.greyPrimary.withValues(alpha: 0.3),
             ),
         ],
       ),
@@ -413,7 +408,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Container(
             padding: const EdgeInsets.all(AppTheme.spacingS),
             decoration: BoxDecoration(
-              color: (hasPermission ? Colors.green : Colors.orange).withValues(alpha: 0.1),
+              color: (hasPermission ? Colors.green : Colors.orange)
+                  .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -556,8 +552,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     // Notification toggle
                     Consumer(
                       builder: (context, ref, child) {
-                        final notificationsEnabledAsync = ref.watch(notificationsEnabledProvider);
-                        
+                        final notificationsEnabledAsync =
+                            ref.watch(notificationsEnabledProvider);
+
                         return notificationsEnabledAsync.when(
                           data: (isEnabled) => _buildNotificationToggleItem(
                             icon: Icons.notifications,
@@ -585,28 +582,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         );
                       },
                     ),
-                    
+
                     // Divider
                     Container(
                       height: 1,
-                      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingM),
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.spacingM),
                       color: AppTheme.borderWhite.withValues(alpha: 0.3),
                     ),
-                    
+
                     // Permission status
                     Consumer(
                       builder: (context, ref, child) {
-                        final permissionStatusAsync = ref.watch(notificationPermissionStatusProvider);
-                        
+                        final permissionStatusAsync =
+                            ref.watch(notificationPermissionStatusProvider);
+
                         return permissionStatusAsync.when(
                           data: (hasPermission) => _buildPermissionStatusItem(
-                            icon: hasPermission ? Icons.check_circle : Icons.warning,
+                            icon: hasPermission
+                                ? Icons.check_circle
+                                : Icons.warning,
                             title: AppStrings.notificationPermissionTitle,
-                            subtitle: hasPermission 
-                              ? AppStrings.notificationPermissionGranted
-                              : AppStrings.notificationPermissionDenied,
+                            subtitle: hasPermission
+                                ? AppStrings.notificationPermissionGranted
+                                : AppStrings.notificationPermissionDenied,
                             hasPermission: hasPermission,
-                            onRequestPermission: hasPermission ? null : _handleRequestPermission,
+                            onRequestPermission:
+                                hasPermission ? null : _handleRequestPermission,
                           ),
                           loading: () => _buildPermissionStatusItem(
                             icon: Icons.info,

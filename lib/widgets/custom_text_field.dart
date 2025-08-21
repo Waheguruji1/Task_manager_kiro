@@ -67,28 +67,22 @@ class CustomTextField extends StatelessWidget {
         fillColor: AppTheme.surfaceGrey,
         contentPadding: contentPadding ?? const EdgeInsets.symmetric(
           horizontal: AppTheme.spacingM,
-          vertical: AppTheme.spacingS,
+          vertical: AppTheme.spacingM,
         ),
         
-        // Boxy design with rounded corners and white border (2px width)
+        // iOS-style design with rounded corners, no borders
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppTheme.inputBorderRadius),
-          borderSide: const BorderSide(
-            color: Colors.white,
-            width: 2.0,
-          ),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppTheme.inputBorderRadius),
-          borderSide: const BorderSide(
-            color: Colors.white,
-            width: 2.0,
-          ),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppTheme.inputBorderRadius),
-          borderSide: const BorderSide(
-            color: AppTheme.borderWhite,
+          borderSide: BorderSide(
+            color: AppTheme.greyPrimary,
             width: 2.0,
           ),
         ),
@@ -108,10 +102,7 @@ class CustomTextField extends StatelessWidget {
         ),
         disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppTheme.inputBorderRadius),
-          borderSide: const BorderSide(
-            color: AppTheme.disabledText,
-            width: 2.0,
-          ),
+          borderSide: BorderSide.none,
         ),
         
         // Text styling

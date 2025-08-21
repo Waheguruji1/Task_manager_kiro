@@ -170,6 +170,13 @@ class _AppInitializerState extends ConsumerState<AppInitializer> with WidgetsBin
       await ref.read(asyncDatabaseServiceProvider.future);
       await ref.read(asyncPreferencesServiceProvider.future);
       
+      // Initialize notification service
+      final notificationService = ref.read(notificationServiceProvider);
+      await notificationService.initialize();
+      
+      // Request notification permissions
+      await notificationService.requestPermissions();
+      
       // Perform automatic cleanup of old completed tasks in the background
       // This runs asynchronously and doesn't block app initialization
       _performBackgroundCleanup();
