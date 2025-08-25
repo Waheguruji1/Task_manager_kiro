@@ -10,7 +10,7 @@ import '../utils/responsive.dart';
 import '../providers/providers.dart';
 
 /// Home Screen Widget
-/// 
+///
 /// The main task management interface with tabbed organization for
 /// everyday and routine tasks. Features personalized greeting,
 /// custom AppBar with share functionality, and task loading/display logic.
@@ -21,7 +21,8 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStateMixin {
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with TickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -40,30 +41,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
   /// Initialize daily routine tasks if needed
   Future<void> _initializeDailyTasks() async {
     try {
-      final prefsService = await ref.read(asyncPreferencesServiceProvider.future);
+      final prefsService =
+          await ref.read(asyncPreferencesServiceProvider.future);
       final dbService = await ref.read(asyncDatabaseServiceProvider.future);
-      
+
       final today = DateTime.now();
       final todayString = '${today.year}-${today.month}-${today.day}';
-      
+
       // Get the last reset date from SharedPreferences
       final lastResetDate = await prefsService.getLastResetDate();
-      
+
       // If it's a new day, create daily routine task instances
       if (lastResetDate != todayString) {
-        ErrorHandler.logError('New day detected. Creating daily routine task instances...', context: 'Daily reset', type: ErrorType.unknown);
-        
+        ErrorHandler.logError(
+            'New day detected. Creating daily routine task instances...',
+            context: 'Daily reset',
+            type: ErrorType.unknown);
+
         final success = await dbService.createDailyRoutineTaskInstances();
         if (success) {
           // Save today's date as the last reset date
           await prefsService.setLastResetDate(todayString);
-          ErrorHandler.logError('Daily routine task instances created successfully for $todayString', context: 'Daily reset', type: ErrorType.unknown);
+          ErrorHandler.logError(
+              'Daily routine task instances created successfully for $todayString',
+              context: 'Daily reset',
+              type: ErrorType.unknown);
         } else {
-          ErrorHandler.logError('Failed to create daily routine task instances', context: 'Daily reset', type: ErrorType.database);
+          ErrorHandler.logError('Failed to create daily routine task instances',
+              context: 'Daily reset', type: ErrorType.database);
         }
       }
     } catch (e) {
-      ErrorHandler.logError(e, context: 'Check and reset daily tasks', type: ErrorType.database);
+      ErrorHandler.logError(e,
+          context: 'Check and reset daily tasks', type: ErrorType.database);
       // Don't throw error as this shouldn't prevent app from loading
     }
   }
@@ -71,15 +81,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
   /// Handle task completion toggle
   Future<void> _onTaskToggle(Task task) async {
     if (task.id == null) return;
-    
+
     try {
-      final taskStateNotifier = await ref.read(asyncTaskStateNotifierProvider.future);
+      final taskStateNotifier =
+          await ref.read(asyncTaskStateNotifierProvider.future);
       final success = await taskStateNotifier.toggleTaskCompletion(task.id!);
-      
+
       if (success) {
         // Show success message for completed tasks
         if (!task.isCompleted && mounted) {
-          ErrorHandler.showSuccessSnackBar(context, AppStrings.taskCompletedSuccess);
+          ErrorHandler.showSuccessSnackBar(
+              context, AppStrings.taskCompletedSuccess);
         }
       } else {
         if (mounted) {
@@ -87,7 +99,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
         }
       }
     } catch (e) {
-      ErrorHandler.logError(e, context: 'Toggle task completion', type: ErrorType.database);
+      ErrorHandler.logError(e,
+          context: 'Toggle task completion', type: ErrorType.database);
       if (mounted) {
         String errorMessage = AppStrings.errorUpdatingTask;
         if (e is AppException) {
@@ -104,12 +117,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
       context,
       task: task,
       onTaskSaved: () {
-        // Reload tasks after saving using Riverpod
-        ref.invalidate(everydayTasksProvider);
-        ref.invalidate(routineTasksProvider);
+        // No need to manually invalidate - TaskStateNotifier handles state updates automatically
       },
     );
-    
+
     if (result == true && mounted) {
       ErrorHandler.showSuccessSnackBar(context, AppStrings.taskUpdatedSuccess);
     }
@@ -118,32 +129,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
   /// Handle task deletion
   Future<void> _onTaskDelete(Task task) async {
     if (task.id == null) return;
-    
+
     // Show confirmation dialog
     final confirmed = await _showDeleteConfirmationDialog(task.title);
     if (!confirmed) return;
-    
+
     try {
-      final taskStateNotifier = await ref.read(asyncTaskStateNotifierProvider.future);
+      final taskStateNotifier =
+          await ref.read(asyncTaskStateNotifierProvider.future);
       bool success;
-      
+
       // Check if this is a routine task template
       if (task.isRoutine && task.routineTaskId == null) {
         // This is a routine task template - delete the routine task and all its instances
-        success = await taskStateNotifier.deleteRoutineTaskAndInstances(task.id!);
+        success =
+            await taskStateNotifier.deleteRoutineTaskAndInstances(task.id!);
       } else {
         // This is either a regular everyday task or a routine task instance
         // Just delete this specific task
         success = await taskStateNotifier.deleteTask(task.id!);
       }
-      
+
       if (success && mounted) {
-        ErrorHandler.showSuccessSnackBar(context, AppStrings.taskDeletedSuccess);
+        ErrorHandler.showSuccessSnackBar(
+            context, AppStrings.taskDeletedSuccess);
       } else if (mounted) {
         ErrorHandler.showErrorSnackBar(context, AppStrings.errorDeletingTask);
       }
     } catch (e) {
-      ErrorHandler.logError(e, context: 'Delete task', type: ErrorType.database);
+      ErrorHandler.logError(e,
+          context: 'Delete task', type: ErrorType.database);
       if (mounted) {
         String errorMessage = AppStrings.errorDeletingTask;
         if (e is AppException) {
@@ -153,8 +168,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
       }
     }
   }
-
-
 
   /// Show delete confirmation dialog
   Future<bool> _showDeleteConfirmationDialog(String taskTitle) async {
@@ -178,11 +191,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
         ],
       ),
     );
-    
+
     return result ?? false;
   }
-
-
 
   /// Build tab bar - iOS Style
   Widget _buildTabBar() {
@@ -196,7 +207,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
         controller: _tabController,
         indicator: BoxDecoration(
           color: AppTheme.greyPrimary,
-          borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius - 2),
+          borderRadius:
+              BorderRadius.circular(AppTheme.containerBorderRadius - 2),
         ),
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
@@ -210,9 +222,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
           fontWeight: FontWeight.w500,
           fontSize: 16,
         ),
-        tabs: const [
-          Tab(text: 'Everyday Tasks'),
-          Tab(text: 'Routine Tasks'),
+        tabs: [
+          Tab(
+            child: Semantics(
+              label: 'Everyday Tasks tab',
+              hint: 'View your daily tasks',
+              child: const Text('Everyday Tasks'),
+            ),
+          ),
+          Tab(
+            child: Semantics(
+              label: 'Routine Tasks tab',
+              hint: 'View your routine tasks',
+              child: const Text('Routine Tasks'),
+            ),
+          ),
         ],
       ),
     );
@@ -220,18 +244,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
 
   /// Build task list for a specific tab
   Widget _buildTaskList(bool isRoutineTab) {
-    final tasksAsync = isRoutineTab
-        ? ref.watch(routineTasksProvider)
-        : ref.watch(everydayTasksProvider);
+    // Watch the task state stream for real-time updates
+    final taskStateStreamAsync = ref.watch(taskStateStreamProvider);
 
-    return tasksAsync.when(
-      data: (tasks) {
+    return taskStateStreamAsync.when(
+      data: (taskState) {
+        final tasks = isRoutineTab 
+            ? taskState.routineTasks 
+            : taskState.everydayTasks;
+
         if (tasks.isEmpty) {
           return _buildEmptyState(isRoutineTab);
         }
 
-        // Sort tasks by priority
-        final sortedTasks = Task.sortByPriority(tasks);
+        // Tasks are already sorted by priority in TaskStateNotifier
+        final sortedTasks = tasks;
 
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingM),
@@ -244,178 +271,206 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
                 margin: const EdgeInsets.only(bottom: AppTheme.spacingM),
                 decoration: BoxDecoration(
                   color: _getTaskBackgroundColor(task),
-                  borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius + 2),
+                  borderRadius:
+                      BorderRadius.circular(AppTheme.containerBorderRadius + 2),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppTheme.spacingL,
                     vertical: AppTheme.spacingM,
                   ),
-                child: Row(
-                  children: [
-                    // Priority indicator
-                    if (task.priority != TaskPriority.none)
-                      Container(
-                        width: 4,
-                        height: 40,
-                        margin: const EdgeInsets.only(right: AppTheme.spacingM),
-                        decoration: BoxDecoration(
-                          color: task.priorityColor,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    
-                    // Checkbox
-                    SizedBox(
-                      width: 28,
-                      height: 28,
-                      child: Checkbox(
-                        value: task.isCompleted,
-                        onChanged: (value) => _onTaskToggle(task),
-                        activeColor: AppTheme.greyPrimary,
-                        checkColor: AppTheme.primaryText,
-                        side: BorderSide(
-                          color: AppTheme.greyLight,
-                          width: 1.5,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(width: AppTheme.spacingM),
-                    
-                    // Task content
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            task.title,
-                            style: AppTheme.bodyLarge.copyWith(
-                              decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-                              color: task.isCompleted 
-                                  ? AppTheme.secondaryText 
-                                  : AppTheme.primaryText,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 17,
-                              height: 1.4,
-                            ),
-                            softWrap: true,
-                            overflow: TextOverflow.visible,
+                  child: Row(
+                    children: [
+                      // Priority indicator
+                      if (task.priority != TaskPriority.none)
+                        Container(
+                          width: 4,
+                          height: 40,
+                          margin:
+                              const EdgeInsets.only(right: AppTheme.spacingM),
+                          decoration: BoxDecoration(
+                            color: task.priorityColor,
+                            borderRadius: BorderRadius.circular(2),
                           ),
-                          
-                          if (task.description != null && task.description!.isNotEmpty) ...[
-                            const SizedBox(height: AppTheme.spacingXS),
-                            Text(
-                              task.description!,
-                              style: AppTheme.bodyMedium.copyWith(
-                                decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-                                color: task.isCompleted 
-                                    ? AppTheme.disabledText 
-                                    : AppTheme.secondaryText,
-                                fontSize: 15,
-                                height: 1.4,
-                              ),
-                              softWrap: true,
-                              overflow: TextOverflow.visible,
+                        ),
+
+                      // Checkbox
+                      Semantics(
+                        label: task.isCompleted
+                            ? 'Task completed'
+                            : 'Mark task as complete',
+                        hint: task.isCompleted
+                            ? 'Tap to mark as incomplete'
+                            : 'Tap to mark as complete',
+                        child: SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: Checkbox(
+                            value: task.isCompleted,
+                            onChanged: (value) => _onTaskToggle(task),
+                            activeColor: AppTheme.greyPrimary,
+                            checkColor: AppTheme.primaryText,
+                            side: BorderSide(
+                              color: AppTheme.greyLight,
+                              width: 1.5,
                             ),
-                          ],
-                          
-                          if (task.isRoutine) ...[
-                            const SizedBox(height: AppTheme.spacingS),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppTheme.spacingS,
-                                vertical: 4,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: AppTheme.spacingM),
+
+                      // Task content
+                      Expanded(
+                        child: Semantics(
+                          label:
+                              '${task.isCompleted ? 'Completed task' : 'Incomplete task'}: ${task.title}',
+                          hint: task.description ?? '',
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                task.title,
+                                style: AppTheme.bodyLarge.copyWith(
+                                  decoration: task.isCompleted
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                  color: task.isCompleted
+                                      ? AppTheme.secondaryText
+                                      : AppTheme.primaryText,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 17,
+                                  height: 1.4,
+                                ),
+                                softWrap: true,
+                                overflow: TextOverflow.visible,
                               ),
-                              decoration: BoxDecoration(
-                                color: AppTheme.greyPrimary.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.repeat,
-                                    size: 12,
-                                    color: AppTheme.greyPrimary,
+                              if (task.description != null &&
+                                  task.description!.isNotEmpty) ...[
+                                const SizedBox(height: AppTheme.spacingXS),
+                                Text(
+                                  task.description!,
+                                  style: AppTheme.bodyMedium.copyWith(
+                                    decoration: task.isCompleted
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                    color: task.isCompleted
+                                        ? AppTheme.disabledText
+                                        : AppTheme.secondaryText,
+                                    fontSize: 15,
+                                    height: 1.4,
                                   ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Routine',
-                                    style: AppTheme.caption.copyWith(
-                                      color: AppTheme.greyPrimary,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 11,
-                                    ),
+                                  softWrap: true,
+                                  overflow: TextOverflow.visible,
+                                ),
+                              ],
+                              if (task.isRoutine) ...[
+                                const SizedBox(height: AppTheme.spacingS),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppTheme.spacingS,
+                                    vertical: 4,
                                   ),
-                                ],
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.greyPrimary
+                                        .withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.repeat,
+                                        size: 12,
+                                        color: AppTheme.greyPrimary,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Routine',
+                                        style: AppTheme.caption.copyWith(
+                                          color: AppTheme.greyPrimary,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: AppTheme.spacingS),
+
+                      // Action buttons
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Edit button
+                          Semantics(
+                            label: 'Edit task',
+                            hint: 'Tap to edit ${task.title}',
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => _onTaskEdit(task),
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.greyLight
+                                        .withValues(alpha: 0.3),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Icon(
+                                    Icons.edit_outlined,
+                                    size: 18,
+                                    color: AppTheme.primaryText,
+                                  ),
+                                ),
                               ),
                             ),
-                          ],
+                          ),
+
+                          const SizedBox(width: AppTheme.spacingXS),
+
+                          // Delete button
+                          Semantics(
+                            label: 'Delete task',
+                            hint: 'Tap to delete ${task.title}',
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => _onTaskDelete(task),
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Icon(
+                                    Icons.delete_outline,
+                                    size: 18,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                    
-                    const SizedBox(width: AppTheme.spacingS),
-                    
-                    // Action buttons
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Edit button
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => _onTaskEdit(task),
-                            borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppTheme.greyLight.withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Icon(
-                                Icons.edit_outlined,
-                                size: 18,
-                                color: AppTheme.primaryText,
-                              ),
-                            ),
-                          ),
-                        ),
-                        
-                        const SizedBox(width: AppTheme.spacingXS),
-                        
-                        // Delete button
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => _onTaskDelete(task),
-                            borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.red.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Icon(
-                                Icons.delete_outline,
-                                size: 18,
-                                color: Colors.red,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
-        ),
+              );
+            },
+          ),
         );
       },
       loading: () => const Center(
@@ -442,11 +497,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
             const SizedBox(height: AppTheme.spacingM),
             ElevatedButton.icon(
               onPressed: () {
-                if (isRoutineTab) {
-                  ref.invalidate(routineTasksProvider);
-                } else {
-                  ref.invalidate(everydayTasksProvider);
-                }
+                // Invalidate the task state stream to reload
+                ref.invalidate(taskStateStreamProvider);
               },
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
@@ -479,9 +531,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
               color: AppTheme.greyPrimary,
             ),
           ),
-          
           const SizedBox(height: AppTheme.spacingL),
-          
           Text(
             isRoutineTab ? 'No routine tasks yet' : 'No tasks for today',
             style: AppTheme.headingMedium.copyWith(
@@ -489,9 +539,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
               fontWeight: FontWeight.w600,
             ),
           ),
-          
           const SizedBox(height: AppTheme.spacingS),
-          
           Text(
             'Tap the + button to add your first task',
             style: AppTheme.bodyMedium.copyWith(
@@ -509,29 +557,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
     if (task.priority == TaskPriority.none) {
       return AppTheme.surfaceGrey;
     }
-    
+
     return Color.alphaBlend(
       task.priorityColor.withValues(alpha: 0.06),
       AppTheme.surfaceGrey,
     );
   }
 
-
-
   /// Handle add task
   Future<void> _onAddTask() async {
     final isRoutineTab = _tabController.index == 1;
-    
+
     final result = await showAddTaskDialog(
       context,
       isRoutineTask: isRoutineTab,
       onTaskSaved: () {
-        // Reload tasks after saving using Riverpod
-        ref.invalidate(everydayTasksProvider);
-        ref.invalidate(routineTasksProvider);
+        // No need to manually invalidate - TaskStateNotifier handles state updates automatically
       },
     );
-    
+
     if (result == true && mounted) {
       ErrorHandler.showSuccessSnackBar(context, AppStrings.taskSavedSuccess);
     }
@@ -541,18 +585,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
   Widget _buildGreeting() {
     // Watch user name from Riverpod provider
     final userNameAsync = ref.watch(userNameProvider);
-    final responsivePadding = ResponsiveUtils.getScreenPadding(context);
+
     final fontMultiplier = ResponsiveUtils.getFontSizeMultiplier(context);
-    
+
     return Container(
+      width: double.infinity,
       padding: EdgeInsets.fromLTRB(
-        responsivePadding.horizontal / 2,
+        AppTheme.spacingM,
         AppTheme.spacingL,
-        responsivePadding.horizontal / 2,
+        AppTheme.spacingM,
         AppTheme.spacingM,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Greeting message
           Text(
@@ -563,14 +609,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
               height: 1.2,
               color: AppTheme.primaryText,
             ),
+            textAlign: TextAlign.left,
           ),
-          
+
           const SizedBox(height: AppTheme.spacingXS),
-          
+
           // Username with proper spacing
           userNameAsync.when(
             data: (userName) {
-              final displayName = (userName?.isNotEmpty ?? false) ? userName! : 'there';
+              final displayName =
+                  (userName?.isNotEmpty ?? false) ? userName! : 'there';
               return Text(
                 '$displayName !',
                 style: AppTheme.headingLarge.copyWith(
@@ -579,6 +627,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
                   height: 1.2,
                   color: AppTheme.primaryText,
                 ),
+                textAlign: TextAlign.left,
               );
             },
             loading: () => Text(
@@ -589,6 +638,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
                 height: 1.2,
                 color: AppTheme.primaryText,
               ),
+              textAlign: TextAlign.left,
             ),
             error: (_, __) => Text(
               'there !',
@@ -598,14 +648,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
                 height: 1.2,
                 color: AppTheme.primaryText,
               ),
+              textAlign: TextAlign.left,
             ),
           ),
         ],
       ),
     );
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -625,40 +674,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
             children: [
               // Personalized greeting
               _buildGreeting(),
-              
+
               // Tab bar
               _buildTabBar(),
-              
+
               const SizedBox(height: AppTheme.spacingM),
-              
+
               // Tab view
               Expanded(
                 child: TabBarView(
                   controller: _tabController,
                   children: [
                     _buildTaskList(false), // Everyday tasks
-                    _buildTaskList(true),  // Routine tasks
+                    _buildTaskList(true), // Routine tasks
                   ],
                 ),
               ),
             ],
           ),
-          floatingActionButton: Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: AppTheme.greyPrimary,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: _onAddTask,
+          floatingActionButton: Semantics(
+            label: 'Add new task',
+            hint: 'Tap to create a new task',
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: AppTheme.greyPrimary,
                 borderRadius: BorderRadius.circular(16),
-                child: const Icon(
-                  Icons.add,
-                  color: AppTheme.primaryText,
-                  size: 24,
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _onAddTask,
+                  borderRadius: BorderRadius.circular(16),
+                  child: const Icon(
+                    Icons.add,
+                    color: AppTheme.primaryText,
+                    size: 24,
+                  ),
                 ),
               ),
             ),
@@ -756,3 +809,5 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
     );
   }
 }
+
+

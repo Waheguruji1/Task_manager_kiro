@@ -6,8 +6,10 @@ import '../utils/error_handler.dart';
 import '../utils/constants.dart';
 import '../utils/validation.dart';
 import '../utils/responsive.dart';
+import '../utils/time_input_validator.dart';
 import '../providers/providers.dart';
 import 'custom_text_field.dart';
+import 'time_input_field.dart';
 
 /// Add/Edit Task Dialog Widget
 /// 
@@ -40,8 +42,9 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   
   late bool _isRoutine;
   TaskPriority _selectedPriority = TaskPriority.none;
-  final _notificationTimeController = TextEditingController();
+  final _notificationTimeInputController = TextEditingController();
   DateTime? _notificationTime;
+  TimeValidationResult? _timeValidationResult;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -62,7 +65,13 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
       // Initialize notification settings if task has notification time
       if (widget.task!.notificationTime != null) {
         _notificationTime = widget.task!.notificationTime!;
-        _notificationTimeController.text = TimeOfDay.fromDateTime(_notificationTime!).format(context);
+        // Populate text field with formatted time for display
+        _notificationTimeInputController.text = TimeInputValidator.formatTimeForDisplay(_notificationTime!);
+        // Initialize validation result with proper state for existing time
+        _timeValidationResult = TimeValidationResult.success(
+          _notificationTime!.hour,
+          _notificationTime!.minute,
+        );
       }
     } else {
       // Creating new task
@@ -74,7 +83,7 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   @override
   void dispose() {
     _titleController.dispose();
-    _notificationTimeController.dispose();
+    _notificationTimeInputController.dispose();
     super.dispose();
   }
 
@@ -83,49 +92,16 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
     return ValidationUtils.validateTaskTitle(value);
   }
 
-  /// Show time picker for notification time
-  Future<void> _showNotificationTimePicker() async {
-    final TimeOfDay? selectedTime = await showTimePicker(
-      context: context,
-      initialTime: _notificationTime != null
-          ? TimeOfDay.fromDateTime(_notificationTime!)
-          : TimeOfDay.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: AppTheme.greyPrimary,
-              onPrimary: AppTheme.primaryText,
-              surface: AppTheme.surfaceGrey,
-              onSurface: AppTheme.primaryText,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (selectedTime != null) {
-      final now = DateTime.now();
-      final selectedDateTime = DateTime(
-        now.year,
-        now.month,
-        now.day,
-        selectedTime.hour,
-        selectedTime.minute,
-      );
-
-      // If the selected time is in the past, set it for tomorrow
-      final finalDateTime = selectedDateTime.isBefore(now)
-          ? selectedDateTime.add(const Duration(days: 1))
-          : selectedDateTime;
-
-      setState(() {
-        _notificationTime = finalDateTime;
-        _notificationTimeController.text = selectedTime.format(context);
-      });
+  /// Validate the entire form including time input
+  String? _validateForm() {
+    // Check if time input is invalid (not empty but malformed)
+    if (!_isRoutine && _timeValidationResult != null && !_timeValidationResult!.isValid && !_timeValidationResult!.isEmpty) {
+      return _timeValidationResult!.errorMessage;
     }
+    return null;
   }
+
+
 
   /// Get priority display text
   String _getPriorityDisplayText(TaskPriority priority) {
@@ -151,9 +127,36 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
     }
   }
 
+  /// Handle time input changes from TimeInputField
+  void _onTimeInputChanged(TimeValidationResult validation) {
+    setState(() {
+      // Update validation result immediately for real-time feedback
+      _timeValidationResult = validation;
+      
+      if (validation.isValid && !validation.isEmpty) {
+        // Update notification time for valid input
+        _notificationTime = validation.toDateTime();
+      } else if (validation.isEmpty) {
+        // Clear notification time when user clears the input field
+        _notificationTime = null;
+      }
+      // For invalid input, maintain previous valid time (don't update _notificationTime)
+      // This ensures we keep the last valid state while showing validation errors
+    });
+  }
+
   /// Save the task to the database
   Future<void> _saveTask() async {
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // Validate time input before proceeding
+    final timeError = _validateForm();
+    if (timeError != null) {
+      setState(() {
+        _errorMessage = timeError;
+      });
       return;
     }
 
@@ -322,9 +325,15 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                       onChanged: (value) {
                         setState(() {
                           _isRoutine = value;
+                          // Clear notification time when switching to routine task
+                          if (_isRoutine) {
+                            _notificationTime = null;
+                            _notificationTimeInputController.clear();
+                            _timeValidationResult = null;
+                          }
                         });
                       },
-                      activeColor: AppTheme.greyPrimary,
+                      activeThumbColor: AppTheme.greyPrimary,
                       inactiveThumbColor: AppTheme.secondaryText,
                       inactiveTrackColor: AppTheme.greyLight.withValues(alpha: 0.2),
                       activeTrackColor: AppTheme.greyPrimary.withValues(alpha: 0.3),
@@ -417,75 +426,13 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                 
                 const SizedBox(height: AppTheme.spacingM),
                 
-                // Simple Notification Time Input
-                GestureDetector(
-                  onTap: _showNotificationTimePicker,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppTheme.spacingM,
-                      vertical: AppTheme.spacingM,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.backgroundDark,
-                      borderRadius: BorderRadius.circular(AppTheme.inputBorderRadius),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.notifications_outlined,
-                          color: AppTheme.greyPrimary,
-                          size: 20,
-                        ),
-                        const SizedBox(width: AppTheme.spacingM),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Notification Time',
-                                style: AppTheme.bodyMedium.copyWith(
-                                  color: AppTheme.primaryText,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _notificationTime != null
-                                    ? 'Remind me at ${TimeOfDay.fromDateTime(_notificationTime!).format(context)}'
-                                    : 'Tap to set reminder time',
-                                style: AppTheme.caption.copyWith(
-                                  color: _notificationTime != null 
-                                      ? AppTheme.greyPrimary 
-                                      : AppTheme.secondaryText,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (_notificationTime != null)
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _notificationTime = null;
-                                _notificationTimeController.clear();
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: AppTheme.secondaryText.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                Icons.close,
-                                size: 16,
-                                color: AppTheme.secondaryText,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
+                // Manual Time Input Field
+                TimeInputField(
+                  controller: _notificationTimeInputController,
+                  labelText: 'Notification Time',
+                  hintText: TimeInputValidator.timeFormatHint,
+                  onTimeChanged: _onTimeInputChanged,
+                  initialValidationResult: _timeValidationResult,
                 ),
               ],
               

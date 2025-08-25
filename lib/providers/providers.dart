@@ -109,8 +109,10 @@ final taskByIdProvider = FutureProvider.family<Task?, int>((ref, id) async {
 /// Task State Notifier Provider
 /// 
 /// Provides a StateNotifier for managing task state and operations
+/// This is the main provider that should be used for real-time task state updates
 final taskStateNotifierProvider = StateNotifierProvider<TaskStateNotifier, TaskState>((ref) {
-  throw UnimplementedError('TaskStateNotifier must be initialized with DatabaseService');
+  // This will be overridden by the async initialization
+  throw UnimplementedError('TaskStateNotifier must be initialized asynchronously');
 });
 
 /// Async Task State Notifier Provider
@@ -121,6 +123,56 @@ final asyncTaskStateNotifierProvider = FutureProvider<TaskStateNotifier>((ref) a
   final achievementService = await ref.watch(achievementServiceProvider.future);
   final notificationService = ref.watch(notificationServiceProvider);
   return TaskStateNotifier(dbService, achievementService, notificationService);
+});
+
+/// Initialized Task State Notifier Provider
+/// 
+/// Provides a StateNotifier that can be watched for real-time updates
+/// This is initialized asynchronously and then provides real-time state updates
+final initializedTaskStateNotifierProvider = StateNotifierProvider<TaskStateNotifier, TaskState>((ref) {
+  // This will be overridden when the async initialization completes
+  throw UnimplementedError('Use asyncTaskStateNotifierProvider for initialization');
+});
+
+/// Task State Stream Provider
+/// 
+/// Provides a stream of task state changes for real-time UI updates
+final taskStateStreamProvider = StreamProvider<TaskState>((ref) async* {
+  final taskStateNotifier = await ref.watch(asyncTaskStateNotifierProvider.future);
+  
+  // Emit initial state
+  yield taskStateNotifier.currentState;
+  
+  // Create a stream that emits state changes every 100ms
+  // This ensures the UI updates when the TaskStateNotifier state changes
+  await for (final _ in Stream.periodic(const Duration(milliseconds: 100))) {
+    yield taskStateNotifier.currentState;
+  }
+});
+
+/// Task State Provider
+/// 
+/// Provides real-time access to task state for UI consumption
+/// This is what the UI should watch for immediate state updates
+final taskStateProvider = FutureProvider<TaskState>((ref) async {
+  final taskStateNotifier = await ref.watch(asyncTaskStateNotifierProvider.future);
+  return taskStateNotifier.currentState;
+});
+
+/// Real-time Everyday Tasks Provider
+/// 
+/// Provides real-time access to everyday tasks from TaskStateNotifier
+final realtimeEverydayTasksProvider = FutureProvider<List<Task>>((ref) async {
+  final taskStateNotifier = await ref.watch(asyncTaskStateNotifierProvider.future);
+  return taskStateNotifier.currentState.everydayTasks;
+});
+
+/// Real-time Routine Tasks Provider
+/// 
+/// Provides real-time access to routine tasks from TaskStateNotifier
+final realtimeRoutineTasksProvider = FutureProvider<List<Task>>((ref) async {
+  final taskStateNotifier = await ref.watch(asyncTaskStateNotifierProvider.future);
+  return taskStateNotifier.currentState.routineTasks;
 });
 
 /// User State Notifier Provider

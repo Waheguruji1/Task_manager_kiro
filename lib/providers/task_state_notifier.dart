@@ -57,6 +57,9 @@ class TaskStateNotifier extends StateNotifier<TaskState> {
     loadTasks();
   }
 
+  /// Get current state (public getter)
+  TaskState get currentState => state;
+
   /// Load all tasks from the database
   Future<void> loadTasks() async {
     try {
@@ -93,11 +96,25 @@ class TaskStateNotifier extends StateNotifier<TaskState> {
       if (task.notificationTime != null && !task.isRoutine) {
         try {
           await _notificationService.initialize();
+          
+          // Perform health check before scheduling
+          await _notificationService.performHealthCheck();
+          
           notificationId = await _notificationService.scheduleTaskNotification(task);
           
           if (notificationId != null) {
             // Update task with notification ID
             task = task.copyWith(notificationId: notificationId);
+            
+            // Verify the notification was scheduled successfully
+            final isScheduled = await _notificationService.isNotificationScheduled(notificationId);
+            if (!isScheduled) {
+              ErrorHandler.logError(
+                'Notification scheduling verification failed',
+                context: 'Schedule notification for new task',
+                type: ErrorType.notification,
+              );
+            }
           }
         } catch (e) {
           ErrorHandler.logError(e, context: 'Schedule notification for new task', type: ErrorType.notification);
@@ -147,6 +164,9 @@ class TaskStateNotifier extends StateNotifier<TaskState> {
         try {
           await _notificationService.initialize();
           
+          // Perform health check before rescheduling
+          await _notificationService.performHealthCheck();
+          
           // Cancel existing notification if it exists
           if (originalTask?.notificationId != null) {
             await _notificationService.cancelTaskNotification(originalTask!.notificationId!);
@@ -160,6 +180,16 @@ class TaskStateNotifier extends StateNotifier<TaskState> {
             if (notificationId != null) {
               // Update task with new notification ID
               task = task.copyWith(notificationId: notificationId);
+              
+              // Verify the notification was rescheduled successfully
+              final isScheduled = await _notificationService.isNotificationScheduled(notificationId);
+              if (!isScheduled) {
+                ErrorHandler.logError(
+                  'Notification rescheduling verification failed',
+                  context: 'Reschedule notification for updated task',
+                  type: ErrorType.notification,
+                );
+              }
             }
           } else {
             // Clear notification ID if no notification time is set
@@ -627,6 +657,221 @@ class TaskStateNotifier extends StateNotifier<TaskState> {
     } catch (e) {
       ErrorHandler.logError(e, context: 'Get pending notification count', type: ErrorType.notification);
       return 0;
+    }
+  }
+
+  /// Get detailed notification service status
+  /// This provides comprehensive information about the notification service health
+  Future<Map<String, dynamic>> getNotificationServiceStatus() async {
+    try {
+      await _notificationService.initialize();
+      final serviceStatus = await _notificationService.getServiceStatus();
+      final platformCompatibility = await _notificationService.detectPlatformCompatibility();
+      final pendingNotifications = await _notificationService.getDetailedPendingNotifications();
+      
+      return {
+        'serviceStatus': serviceStatus.toJson(),
+        'platformCompatibility': platformCompatibility.toJson(),
+        'pendingNotificationsCount': pendingNotifications.length,
+        'pendingNotifications': pendingNotifications,
+      };
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Get notification service status', type: ErrorType.notification);
+      return {
+        'error': e.toString(),
+        'serviceStatus': null,
+        'platformCompatibility': null,
+        'pendingNotificationsCount': 0,
+        'pendingNotifications': [],
+      };
+    }
+  }
+
+  /// Perform notification service health check
+  /// This ensures the notification service is working properly
+  Future<bool> performNotificationHealthCheck() async {
+    try {
+      await _notificationService.initialize();
+      await _notificationService.performHealthCheck();
+      
+      final serviceStatus = await _notificationService.getServiceStatus();
+      return serviceStatus.isHealthy;
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Perform notification health check', type: ErrorType.notification);
+      return false;
+    }
+  }
+
+  /// Attempt notification service recovery
+  /// This tries to fix common notification service issues
+  Future<bool> attemptNotificationServiceRecovery() async {
+    try {
+      await _notificationService.initialize();
+      await _notificationService.attemptServiceRecovery();
+      
+      final serviceStatus = await _notificationService.getServiceStatus();
+      return serviceStatus.isHealthy;
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Attempt notification service recovery', type: ErrorType.notification);
+      return false;
+    }
+  }
+
+  /// Send test notification
+  /// This allows testing notification functionality from the task management context
+  Future<bool> sendTestNotification() async {
+    try {
+      await _notificationService.initialize();
+      return await _notificationService.sendTestNotification();
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Send test notification', type: ErrorType.notification);
+      return false;
+    }
+  }
+
+  /// Get detailed permission status
+  /// This provides more granular permission information than the basic check
+  Future<String> getDetailedNotificationPermissionStatus() async {
+    try {
+      await _notificationService.initialize();
+      final permissionStatus = await _notificationService.getDetailedPermissionStatus();
+      
+      switch (permissionStatus) {
+        case NotificationPermissionStatus.granted:
+          return 'Granted';
+        case NotificationPermissionStatus.denied:
+          return 'Denied';
+        case NotificationPermissionStatus.notDetermined:
+          return 'Not Determined';
+        case NotificationPermissionStatus.provisional:
+          return 'Provisional (iOS)';
+        case NotificationPermissionStatus.restricted:
+          return 'Restricted (iOS)';
+        case NotificationPermissionStatus.unknown:
+          return 'Unknown';
+      }
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Get detailed notification permission status', type: ErrorType.notification);
+      return 'Error checking permissions';
+    }
+  }
+
+  /// Verify all task notifications are properly scheduled
+  /// This checks that all tasks with notification times have valid scheduled notifications
+  Future<Map<String, dynamic>> verifyTaskNotifications() async {
+    try {
+      await _notificationService.initialize();
+      
+      final allTasks = [...state.everydayTasks, ...state.routineTasks];
+      final tasksWithNotifications = allTasks.where((task) => 
+        task.notificationTime != null && !task.isRoutine && !task.isCompleted
+      ).toList();
+      
+      final pendingNotifications = await _notificationService.getPendingNotifications();
+      final pendingIds = pendingNotifications.map((n) => n.id).toSet();
+      
+      final verificationResults = <String, dynamic>{
+        'totalTasksWithNotifications': tasksWithNotifications.length,
+        'totalPendingNotifications': pendingNotifications.length,
+        'missingNotifications': <Map<String, dynamic>>[],
+        'orphanedNotifications': <int>[],
+        'verifiedNotifications': 0,
+      };
+      
+      // Check for missing notifications
+      for (final task in tasksWithNotifications) {
+        if (task.notificationId != null) {
+          if (pendingIds.contains(task.notificationId)) {
+            verificationResults['verifiedNotifications'] = 
+                (verificationResults['verifiedNotifications'] as int) + 1;
+          } else {
+            (verificationResults['missingNotifications'] as List).add({
+              'taskId': task.id,
+              'taskTitle': task.title,
+              'notificationId': task.notificationId,
+              'scheduledTime': task.notificationTime?.toIso8601String(),
+            });
+          }
+        }
+      }
+      
+      // Check for orphaned notifications (notifications without corresponding tasks)
+      final taskNotificationIds = tasksWithNotifications
+          .where((task) => task.notificationId != null)
+          .map((task) => task.notificationId!)
+          .toSet();
+      
+      for (final notification in pendingNotifications) {
+        if (!taskNotificationIds.contains(notification.id)) {
+          (verificationResults['orphanedNotifications'] as List).add(notification.id);
+        }
+      }
+      
+      return verificationResults;
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Verify task notifications', type: ErrorType.notification);
+      return {
+        'error': e.toString(),
+        'totalTasksWithNotifications': 0,
+        'totalPendingNotifications': 0,
+        'missingNotifications': [],
+        'orphanedNotifications': [],
+        'verifiedNotifications': 0,
+      };
+    }
+  }
+
+  /// Fix notification inconsistencies
+  /// This attempts to fix missing or orphaned notifications
+  Future<bool> fixNotificationInconsistencies() async {
+    try {
+      state = state.copyWith(isLoading: true, error: null);
+      
+      final verificationResults = await verifyTaskNotifications();
+      final missingNotifications = verificationResults['missingNotifications'] as List;
+      final orphanedNotifications = verificationResults['orphanedNotifications'] as List;
+      
+      // Cancel orphaned notifications
+      for (final notificationId in orphanedNotifications) {
+        try {
+          await _notificationService.cancelTaskNotification(notificationId as int);
+        } catch (e) {
+          ErrorHandler.logError(e, context: 'Cancel orphaned notification $notificationId', type: ErrorType.notification);
+        }
+      }
+      
+      // Reschedule missing notifications
+      for (final missingNotification in missingNotifications) {
+        try {
+          final taskId = missingNotification['taskId'] as int?;
+          if (taskId != null) {
+            final task = await _databaseService.getTaskById(taskId);
+            if (task != null && task.notificationTime != null) {
+              final newNotificationId = await _notificationService.scheduleTaskNotification(task);
+              if (newNotificationId != null) {
+                // Update task with new notification ID
+                final updatedTask = task.copyWith(notificationId: newNotificationId);
+                await _databaseService.updateTask(updatedTask);
+              }
+            }
+          }
+        } catch (e) {
+          ErrorHandler.logError(e, context: 'Fix missing notification for task ${missingNotification['taskId']}', type: ErrorType.notification);
+        }
+      }
+      
+      // Reload tasks to reflect changes
+      await loadTasks();
+      
+      state = state.copyWith(isLoading: false);
+      return true;
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Fix notification inconsistencies', type: ErrorType.notification);
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to fix notification inconsistencies: ${e.toString()}',
+      );
+      return false;
     }
   }
 }

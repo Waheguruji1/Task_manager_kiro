@@ -20,6 +20,8 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _isLoading = false;
   bool _isUpdatingNotifications = false;
+  bool _isSendingTestNotification = false;
+  bool _isCheckingServiceStatus = false;
 
   /// Handle clear all data
   Future<void> _handleClearAllData() async {
@@ -218,6 +220,360 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  /// Handle send test notification
+  Future<void> _handleSendTestNotification() async {
+    if (_isSendingTestNotification) return;
+
+    setState(() {
+      _isSendingTestNotification = true;
+    });
+
+    try {
+      final notificationService = ref.read(notificationServiceProvider);
+      final success = await notificationService.sendTestNotification();
+
+      if (mounted) {
+        if (success) {
+          ErrorHandler.showSuccessSnackBar(
+            context,
+            'Test notification sent successfully! Check your notification panel.',
+          );
+        } else {
+          ErrorHandler.showErrorSnackBar(
+            context,
+            'Failed to send test notification. Check your notification settings.',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context,
+          'Failed to send test notification: ${e.toString()}',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSendingTestNotification = false;
+        });
+      }
+    }
+  }
+
+  /// Handle send scheduled test notification
+  Future<void> _handleSendScheduledTestNotification() async {
+    try {
+      final notificationService = ref.read(notificationServiceProvider);
+      final notificationId = await notificationService.sendScheduledTestNotification(delayMinutes: 1);
+
+      if (mounted) {
+        if (notificationId != null) {
+          ErrorHandler.showSuccessSnackBar(
+            context,
+            'Scheduled test notification will appear in 1 minute (ID: $notificationId)',
+          );
+        } else {
+          ErrorHandler.showErrorSnackBar(
+            context,
+            'Failed to schedule test notification. Check your notification settings.',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context,
+          'Failed to schedule test notification: ${e.toString()}',
+        );
+      }
+    }
+  }
+
+  /// Show notification service status dialog
+  Future<void> _showServiceStatusDialog() async {
+    if (_isCheckingServiceStatus) return;
+
+    setState(() {
+      _isCheckingServiceStatus = true;
+    });
+
+    try {
+      final notificationService = ref.read(notificationServiceProvider);
+      final serviceStatus = await notificationService.getServiceStatus();
+      final platformCompatibility = await notificationService.detectPlatformCompatibility();
+      final pendingNotifications = await notificationService.getDetailedPendingNotifications();
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: AppTheme.surfaceGrey,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
+            ),
+            title: Row(
+              children: [
+                Icon(
+                  serviceStatus.isHealthy ? Icons.check_circle : Icons.warning,
+                  color: serviceStatus.isHealthy ? Colors.green : Colors.orange,
+                  size: 24,
+                ),
+                const SizedBox(width: AppTheme.spacingS),
+                const Text(
+                  'Notification Service Status',
+                  style: TextStyle(color: AppTheme.primaryText, fontSize: 18),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Service Health
+                  _buildStatusItem('Service Health', serviceStatus.isHealthy ? 'Healthy' : 'Unhealthy'),
+                  _buildStatusItem('Initialized', serviceStatus.isInitialized ? 'Yes' : 'No'),
+                  _buildStatusItem('Channels Created', serviceStatus.channelsCreated ? 'Yes' : 'No'),
+                  _buildStatusItem('Timezone Ready', serviceStatus.timezoneInitialized ? 'Yes' : 'No'),
+                  _buildStatusItem('Permissions Granted', serviceStatus.permissionsGranted ? 'Yes' : 'No'),
+                  
+                  const SizedBox(height: AppTheme.spacingM),
+                  
+                  // Platform Info
+                  Text(
+                    'Platform Information',
+                    style: AppTheme.bodyLarge.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primaryText,
+                    ),
+                  ),
+                  const SizedBox(height: AppTheme.spacingS),
+                  _buildStatusItem('Platform', '${platformCompatibility.platform} ${platformCompatibility.version}'),
+                  _buildStatusItem('Supports Channels', platformCompatibility.supportsNotificationChannels ? 'Yes' : 'No'),
+                  _buildStatusItem('Supports Exact Alarms', platformCompatibility.supportsExactAlarms ? 'Yes' : 'No'),
+                  
+                  const SizedBox(height: AppTheme.spacingM),
+                  
+                  // Pending Notifications
+                  Text(
+                    'Pending Notifications',
+                    style: AppTheme.bodyLarge.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primaryText,
+                    ),
+                  ),
+                  const SizedBox(height: AppTheme.spacingS),
+                  _buildStatusItem('Count', '${pendingNotifications.length}'),
+                  
+                  // Errors and Warnings
+                  if (serviceStatus.errors.isNotEmpty) ...[
+                    const SizedBox(height: AppTheme.spacingM),
+                    Text(
+                      'Errors',
+                      style: AppTheme.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red,
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingS),
+                    ...serviceStatus.errors.map((error) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '• $error',
+                        style: AppTheme.caption.copyWith(color: Colors.red),
+                      ),
+                    )),
+                  ],
+                  
+                  if (serviceStatus.warnings.isNotEmpty) ...[
+                    const SizedBox(height: AppTheme.spacingM),
+                    Text(
+                      'Warnings',
+                      style: AppTheme.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange,
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingS),
+                    ...serviceStatus.warnings.map((warning) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '• $warning',
+                        style: AppTheme.caption.copyWith(color: Colors.orange),
+                      ),
+                    )),
+                  ],
+                  
+                  // Platform Limitations
+                  if (platformCompatibility.limitations.isNotEmpty) ...[
+                    const SizedBox(height: AppTheme.spacingM),
+                    Text(
+                      'Platform Limitations',
+                      style: AppTheme.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.secondaryText,
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingS),
+                    ...platformCompatibility.limitations.map((limitation) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '• $limitation',
+                        style: AppTheme.caption.copyWith(color: AppTheme.secondaryText),
+                      ),
+                    )),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text(
+                  'Close',
+                  style: TextStyle(color: AppTheme.greyPrimary),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context,
+          'Failed to get service status: ${e.toString()}',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCheckingServiceStatus = false;
+        });
+      }
+    }
+  }
+
+  /// Build status item for dialog
+  Widget _buildStatusItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: AppTheme.bodyMedium.copyWith(
+                color: AppTheme.secondaryText,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: AppTheme.bodyMedium.copyWith(
+                color: AppTheme.primaryText,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show notification troubleshooting dialog
+  Future<void> _showTroubleshootingDialog() async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceGrey,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
+        ),
+        title: const Text(
+          'Notification Troubleshooting',
+          style: TextStyle(color: AppTheme.primaryText),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildTroubleshootingItem(
+                'Notifications not appearing',
+                [
+                  'Check notification permissions in device settings',
+                  'Ensure notifications are enabled in the app',
+                  'Check if Do Not Disturb mode is enabled',
+                  'Try sending a test notification',
+                ],
+              ),
+              const SizedBox(height: AppTheme.spacingM),
+              _buildTroubleshootingItem(
+                'Notifications appearing late',
+                [
+                  'Check battery optimization settings',
+                  'Add the app to battery optimization whitelist',
+                  'Ensure exact alarm permissions are granted (Android 12+)',
+                  'Check if power saving mode is enabled',
+                ],
+              ),
+              const SizedBox(height: AppTheme.spacingM),
+              _buildTroubleshootingItem(
+                'Test notification failed',
+                [
+                  'Check service status for errors',
+                  'Restart the app and try again',
+                  'Check device notification settings',
+                  'Ensure the app has all required permissions',
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'Close',
+              style: TextStyle(color: AppTheme.greyPrimary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build troubleshooting item
+  Widget _buildTroubleshootingItem(String title, List<String> solutions) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: AppTheme.bodyLarge.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppTheme.primaryText,
+          ),
+        ),
+        const SizedBox(height: AppTheme.spacingS),
+        ...solutions.map((solution) => Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Text(
+            '• $solution',
+            style: AppTheme.bodyMedium.copyWith(
+              color: AppTheme.secondaryText,
+            ),
+          ),
+        )),
+      ],
+    );
+  }
+
   /// Build settings section
   Widget _buildSettingsSection({
     required String title,
@@ -383,7 +739,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Switch.adaptive(
               value: value,
               onChanged: onChanged,
-              activeColor: AppTheme.greyPrimary,
+              activeThumbColor: AppTheme.greyPrimary,
               inactiveThumbColor: AppTheme.secondaryText,
               inactiveTrackColor: AppTheme.greyLight.withValues(alpha: 0.2),
               activeTrackColor: AppTheme.greyPrimary.withValues(alpha: 0.3),
@@ -624,6 +980,71 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                         );
                       },
+                    ),
+
+                    // Divider
+                    Container(
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.spacingM),
+                      color: AppTheme.borderWhite.withValues(alpha: 0.3),
+                    ),
+
+                    // Test notification button
+                    _buildSettingsItem(
+                      icon: Icons.notification_add,
+                      title: 'Send Test Notification',
+                      subtitle: 'Test if notifications are working correctly',
+                      onTap: _isSendingTestNotification ? () {} : _handleSendTestNotification,
+                    ),
+
+                    // Divider
+                    Container(
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.spacingM),
+                      color: AppTheme.borderWhite.withValues(alpha: 0.3),
+                    ),
+
+                    // Scheduled test notification button
+                    _buildSettingsItem(
+                      icon: Icons.schedule,
+                      title: 'Send Scheduled Test',
+                      subtitle: 'Test scheduled notification (1 minute delay)',
+                      onTap: _handleSendScheduledTestNotification,
+                    ),
+
+                    // Divider
+                    Container(
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.spacingM),
+                      color: AppTheme.borderWhite.withValues(alpha: 0.3),
+                    ),
+
+                    // Service status button
+                    _buildSettingsItem(
+                      icon: Icons.info_outline,
+                      title: 'Service Status',
+                      subtitle: 'View detailed notification service information',
+                      onTap: _isCheckingServiceStatus ? () {} : _showServiceStatusDialog,
+                    ),
+
+                    // Divider
+                    Container(
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.spacingM),
+                      color: AppTheme.borderWhite.withValues(alpha: 0.3),
+                    ),
+
+                    // Troubleshooting button
+                    _buildSettingsItem(
+                      icon: Icons.help_outline,
+                      title: 'Troubleshooting',
+                      subtitle: 'Get help with notification issues',
+                      onTap: _showTroubleshootingDialog,
+                      showDivider: false,
                     ),
                   ],
                 ),

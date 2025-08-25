@@ -27,19 +27,40 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   ];
 
   final List<BottomNavigationBarItem> _navItems = [
-    const BottomNavigationBarItem(
-      icon: Icon(CupertinoIcons.home),
-      activeIcon: Icon(CupertinoIcons.house_fill),
+    BottomNavigationBarItem(
+      icon: Semantics(
+        label: 'Home tab',
+        hint: 'Navigate to home screen',
+        child: const Icon(CupertinoIcons.home),
+      ),
+      activeIcon: Semantics(
+        label: 'Home tab active',
+        child: const Icon(CupertinoIcons.house_fill),
+      ),
       label: 'Home',
     ),
-    const BottomNavigationBarItem(
-      icon: Icon(CupertinoIcons.chart_bar),
-      activeIcon: Icon(CupertinoIcons.chart_bar_fill),
+    BottomNavigationBarItem(
+      icon: Semantics(
+        label: 'Statistics tab',
+        hint: 'Navigate to statistics screen',
+        child: const Icon(CupertinoIcons.chart_bar),
+      ),
+      activeIcon: Semantics(
+        label: 'Statistics tab active',
+        child: const Icon(CupertinoIcons.chart_bar_fill),
+      ),
       label: 'Stats',
     ),
-    const BottomNavigationBarItem(
-      icon: Icon(CupertinoIcons.settings),
-      activeIcon: Icon(CupertinoIcons.settings_solid),
+    BottomNavigationBarItem(
+      icon: Semantics(
+        label: 'Settings tab',
+        hint: 'Navigate to settings screen',
+        child: const Icon(CupertinoIcons.settings),
+      ),
+      activeIcon: Semantics(
+        label: 'Settings tab active',
+        child: const Icon(CupertinoIcons.settings_solid),
+      ),
       label: 'Settings',
     ),
   ];
