@@ -46,8 +46,7 @@ class ErrorHandler {
         print('Stack trace: $stackTrace');
       }
     } else {
-      // In production, you would send to crash reporting service
-      // For now, we'll just use debugPrint which is stripped in release
+      // Simple logging for production
       debugPrint('ERROR: $errorMessage');
     }
   }
@@ -63,8 +62,7 @@ class ErrorHandler {
       // In debug mode, print to console
       print('INFO: $infoMessage');
     } else {
-      // In production, you would send to analytics service
-      // For now, we'll just use debugPrint which is stripped in release
+      // Simple logging for production
       debugPrint('INFO: $infoMessage');
     }
   }

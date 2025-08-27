@@ -18,8 +18,9 @@ class StatsScreen extends ConsumerStatefulWidget {
 }
 
 class _StatsScreenState extends ConsumerState<StatsScreen> {
-  int _selectedMonth = DateTime.now().month;
-  final int _selectedYear = DateTime.now().year;
+  // Month selector state (for future use)
+  // int _selectedMonth = DateTime.now().month;
+  // final int _selectedYear = DateTime.now().year;
 
   /// Generate sample tasks for demonstration when database is empty
   List<Task> _generateSampleTasks() {

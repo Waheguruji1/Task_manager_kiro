@@ -237,8 +237,8 @@ class AppAssets {
   // Private constructor to prevent instantiation
   AppAssets._();
 
-  // Fonts
-  static const String sourGummyFont = 'assets/fonts/SourGummy-Regular.ttf';
+  // Fonts - Using system fonts for simplicity
+  // static const String sourGummyFont = 'assets/fonts/SourGummy-Regular.ttf';
 
   // Images (for future use)
   static const String appLogo = 'assets/images/app_logo.png';

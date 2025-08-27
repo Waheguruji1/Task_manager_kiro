@@ -6,8 +6,8 @@ import '../models/task.dart';
 import '../utils/theme.dart';
 import '../utils/constants.dart';
 import '../utils/error_handler.dart';
-import '../utils/responsive.dart';
 import '../providers/providers.dart';
+import 'package:intl/intl.dart';
 
 /// Home Screen Widget
 ///
@@ -242,236 +242,280 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  /// Build task list for a specific tab
+  /// Get date label for task container
+  String _getDateLabel(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final taskDate = DateTime(date.year, date.month, date.day);
+
+    if (taskDate == today) {
+      return 'Today';
+    } else if (taskDate == yesterday) {
+      return 'Yesterday';
+    } else {
+      return DateFormat('MMM d, yyyy').format(date);
+    }
+  }
+
+  /// Group tasks by date
+  Map<DateTime, List<Task>> _groupTasksByDate(List<Task> tasks) {
+    final Map<DateTime, List<Task>> groupedTasks = {};
+
+    for (final task in tasks) {
+      final taskDate = DateTime(
+        task.createdAt.year,
+        task.createdAt.month,
+        task.createdAt.day,
+      );
+
+      if (groupedTasks[taskDate] == null) {
+        groupedTasks[taskDate] = [];
+      }
+      groupedTasks[taskDate]!.add(task);
+    }
+
+    return groupedTasks;
+  }
+
+  /// Build task container with date header
+  Widget _buildTaskContainer(DateTime date, List<Task> tasks) {
+    return Container(
+      margin: const EdgeInsets.only(
+        left: AppTheme.spacingM,
+        right: AppTheme.spacingM,
+        bottom: AppTheme.spacingL,
+      ),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceGrey,
+        borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Date header with white background and black text
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.spacingM,
+              vertical: AppTheme.spacingS,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(AppTheme.containerBorderRadius),
+                topRight: Radius.circular(AppTheme.containerBorderRadius),
+              ),
+            ),
+            child: Text(
+              _getDateLabel(date),
+              style: AppTheme.bodyMedium.copyWith(
+                color: Colors.black,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+
+          // Task tiles
+          ...tasks.map((task) => _buildTaskTile(task)),
+        ],
+      ),
+    );
+  }
+
+  /// Build individual task tile with improved boxy theme
+  Widget _buildTaskTile(Task task) {
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.spacingM),
+      child: Row(
+        children: [
+          // Priority indicator
+          if (task.priority != TaskPriority.none)
+            Container(
+              width: 4,
+              height: 40,
+              margin: const EdgeInsets.only(right: AppTheme.spacingM),
+              decoration: BoxDecoration(
+                color: task.priorityColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+          // Checkbox
+          SizedBox(
+            width: 28,
+            height: 28,
+            child: Checkbox(
+              value: task.isCompleted,
+              onChanged: (value) => _onTaskToggle(task),
+              activeColor: AppTheme.greyPrimary,
+              checkColor: AppTheme.primaryText,
+              side: BorderSide(
+                color: AppTheme.greyLight,
+                width: 1.5,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+          ),
+
+          const SizedBox(width: AppTheme.spacingM),
+
+          // Task content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  task.title,
+                  style: AppTheme.bodyLarge.copyWith(
+                    decoration:
+                        task.isCompleted ? TextDecoration.lineThrough : null,
+                    color: task.isCompleted
+                        ? AppTheme.secondaryText
+                        : AppTheme.primaryText,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 17,
+                  ),
+                ),
+                if (task.description != null &&
+                    task.description!.isNotEmpty) ...[
+                  const SizedBox(height: AppTheme.spacingXS),
+                  Text(
+                    task.description!,
+                    style: AppTheme.bodyMedium.copyWith(
+                      decoration:
+                          task.isCompleted ? TextDecoration.lineThrough : null,
+                      color: task.isCompleted
+                          ? AppTheme.disabledText
+                          : AppTheme.secondaryText,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(width: AppTheme.spacingM),
+
+          // Action buttons with boxy theme and proper spacing
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Edit button - boxy design
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _onTaskEdit(task),
+                  borderRadius:
+                      BorderRadius.circular(AppTheme.buttonBorderRadius),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppTheme.greyLight.withValues(alpha: 0.2),
+                      borderRadius:
+                          BorderRadius.circular(AppTheme.buttonBorderRadius),
+                    ),
+                    child: Icon(
+                      Icons.edit_outlined,
+                      size: 18,
+                      color: AppTheme.primaryText,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(
+                  width: AppTheme.spacingS), // Proper spacing between buttons
+
+              // Delete button - boxy design
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _onTaskDelete(task),
+                  borderRadius:
+                      BorderRadius.circular(AppTheme.buttonBorderRadius),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.15),
+                      borderRadius:
+                          BorderRadius.circular(AppTheme.buttonBorderRadius),
+                    ),
+                    child: Icon(
+                      Icons.delete_outline,
+                      size: 18,
+                      color: Colors.red,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build task list for everyday tasks only (no routine tasks in containers)
   Widget _buildTaskList(bool isRoutineTab) {
-    // Watch the task state stream for real-time updates
     final taskStateStreamAsync = ref.watch(taskStateStreamProvider);
 
     return taskStateStreamAsync.when(
       data: (taskState) {
-        final tasks = isRoutineTab 
-            ? taskState.routineTasks 
-            : taskState.everydayTasks;
+        if (isRoutineTab) {
+          // For routine tasks, show the old layout
+          final tasks = taskState.routineTasks;
+          if (tasks.isEmpty) {
+            return _buildEmptyState(isRoutineTab);
+          }
 
-        if (tasks.isEmpty) {
-          return _buildEmptyState(isRoutineTab);
-        }
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingM),
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingM),
+              itemCount: tasks.length,
+              itemBuilder: (context, index) {
+                final task = tasks[index];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: AppTheme.spacingM),
+                  decoration: BoxDecoration(
+                    color: _getTaskBackgroundColor(task),
+                    borderRadius:
+                        BorderRadius.circular(AppTheme.containerBorderRadius),
+                  ),
+                  child: _buildTaskTile(task),
+                );
+              },
+            ),
+          );
+        } else {
+          // For everyday tasks, show new container layout
+          final everydayTasks =
+              taskState.everydayTasks.where((task) => !task.isRoutine).toList();
 
-        // Tasks are already sorted by priority in TaskStateNotifier
-        final sortedTasks = tasks;
+          if (everydayTasks.isEmpty) {
+            return _buildEmptyState(isRoutineTab);
+          }
 
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingM),
-          child: ListView.builder(
+          // Group tasks by date
+          final groupedTasks = _groupTasksByDate(everydayTasks);
+          final sortedDates = groupedTasks.keys.toList()
+            ..sort((a, b) => b.compareTo(a));
+
+          return ListView.builder(
             padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingM),
-            itemCount: sortedTasks.length,
+            itemCount: sortedDates.length,
             itemBuilder: (context, index) {
-              final task = sortedTasks[index];
-              return Container(
-                margin: const EdgeInsets.only(bottom: AppTheme.spacingM),
-                decoration: BoxDecoration(
-                  color: _getTaskBackgroundColor(task),
-                  borderRadius:
-                      BorderRadius.circular(AppTheme.containerBorderRadius + 2),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppTheme.spacingL,
-                    vertical: AppTheme.spacingM,
-                  ),
-                  child: Row(
-                    children: [
-                      // Priority indicator
-                      if (task.priority != TaskPriority.none)
-                        Container(
-                          width: 4,
-                          height: 40,
-                          margin:
-                              const EdgeInsets.only(right: AppTheme.spacingM),
-                          decoration: BoxDecoration(
-                            color: task.priorityColor,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-
-                      // Checkbox
-                      Semantics(
-                        label: task.isCompleted
-                            ? 'Task completed'
-                            : 'Mark task as complete',
-                        hint: task.isCompleted
-                            ? 'Tap to mark as incomplete'
-                            : 'Tap to mark as complete',
-                        child: SizedBox(
-                          width: 28,
-                          height: 28,
-                          child: Checkbox(
-                            value: task.isCompleted,
-                            onChanged: (value) => _onTaskToggle(task),
-                            activeColor: AppTheme.greyPrimary,
-                            checkColor: AppTheme.primaryText,
-                            side: BorderSide(
-                              color: AppTheme.greyLight,
-                              width: 1.5,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(width: AppTheme.spacingM),
-
-                      // Task content
-                      Expanded(
-                        child: Semantics(
-                          label:
-                              '${task.isCompleted ? 'Completed task' : 'Incomplete task'}: ${task.title}',
-                          hint: task.description ?? '',
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                task.title,
-                                style: AppTheme.bodyLarge.copyWith(
-                                  decoration: task.isCompleted
-                                      ? TextDecoration.lineThrough
-                                      : null,
-                                  color: task.isCompleted
-                                      ? AppTheme.secondaryText
-                                      : AppTheme.primaryText,
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 17,
-                                  height: 1.4,
-                                ),
-                                softWrap: true,
-                                overflow: TextOverflow.visible,
-                              ),
-                              if (task.description != null &&
-                                  task.description!.isNotEmpty) ...[
-                                const SizedBox(height: AppTheme.spacingXS),
-                                Text(
-                                  task.description!,
-                                  style: AppTheme.bodyMedium.copyWith(
-                                    decoration: task.isCompleted
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                    color: task.isCompleted
-                                        ? AppTheme.disabledText
-                                        : AppTheme.secondaryText,
-                                    fontSize: 15,
-                                    height: 1.4,
-                                  ),
-                                  softWrap: true,
-                                  overflow: TextOverflow.visible,
-                                ),
-                              ],
-                              if (task.isRoutine) ...[
-                                const SizedBox(height: AppTheme.spacingS),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: AppTheme.spacingS,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.greyPrimary
-                                        .withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.repeat,
-                                        size: 12,
-                                        color: AppTheme.greyPrimary,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'Routine',
-                                        style: AppTheme.caption.copyWith(
-                                          color: AppTheme.greyPrimary,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(width: AppTheme.spacingS),
-
-                      // Action buttons
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Edit button
-                          Semantics(
-                            label: 'Edit task',
-                            hint: 'Tap to edit ${task.title}',
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () => _onTaskEdit(task),
-                                borderRadius: BorderRadius.circular(20),
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.greyLight
-                                        .withValues(alpha: 0.3),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Icon(
-                                    Icons.edit_outlined,
-                                    size: 18,
-                                    color: AppTheme.primaryText,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(width: AppTheme.spacingXS),
-
-                          // Delete button
-                          Semantics(
-                            label: 'Delete task',
-                            hint: 'Tap to delete ${task.title}',
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () => _onTaskDelete(task),
-                                borderRadius: BorderRadius.circular(20),
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Icon(
-                                    Icons.delete_outline,
-                                    size: 18,
-                                    color: Colors.red,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
+              final date = sortedDates[index];
+              final tasks = groupedTasks[date]!;
+              return _buildTaskContainer(date, tasks);
             },
-          ),
-        );
+          );
+        }
       },
       loading: () => const Center(
         child: CircularProgressIndicator(
@@ -497,7 +541,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             const SizedBox(height: AppTheme.spacingM),
             ElevatedButton.icon(
               onPressed: () {
-                // Invalidate the task state stream to reload
                 ref.invalidate(taskStateStreamProvider);
               },
               icon: const Icon(Icons.refresh),
@@ -581,74 +624,71 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
   }
 
+  /// Get timezone-based greeting message
+  String _getGreetingMessage() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Good Morning';
+    } else if (hour < 17) {
+      return 'Good Afternoon';
+    } else {
+      return 'Good Evening';
+    }
+  }
+
   /// Build personalized greeting message
   Widget _buildGreeting() {
-    // Watch user name from Riverpod provider
     final userNameAsync = ref.watch(userNameProvider);
 
-    final fontMultiplier = ResponsiveUtils.getFontSizeMultiplier(context);
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.spacingM,
+        AppTheme.spacingM,
         AppTheme.spacingM,
         AppTheme.spacingL,
-        AppTheme.spacingM,
-        AppTheme.spacingM,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // Greeting message
+          // Timezone-based greeting
           Text(
-            'Hello 👋',
+            _getGreetingMessage(),
             style: AppTheme.headingLarge.copyWith(
-              fontSize: 28 * fontMultiplier,
+              fontSize: 28,
               fontWeight: FontWeight.w600,
-              height: 1.2,
               color: AppTheme.primaryText,
             ),
-            textAlign: TextAlign.left,
           ),
 
-          const SizedBox(height: AppTheme.spacingXS),
-
-          // Username with proper spacing
+          // Username on next line
           userNameAsync.when(
             data: (userName) {
               final displayName =
                   (userName?.isNotEmpty ?? false) ? userName! : 'there';
               return Text(
-                '$displayName !',
+                '$displayName!',
                 style: AppTheme.headingLarge.copyWith(
-                  fontSize: 28 * fontMultiplier,
+                  fontSize: 28,
                   fontWeight: FontWeight.w600,
-                  height: 1.2,
                   color: AppTheme.primaryText,
                 ),
-                textAlign: TextAlign.left,
               );
             },
             loading: () => Text(
-              'there !',
+              'there!',
               style: AppTheme.headingLarge.copyWith(
-                fontSize: 28 * fontMultiplier,
+                fontSize: 28,
                 fontWeight: FontWeight.w600,
-                height: 1.2,
                 color: AppTheme.primaryText,
               ),
-              textAlign: TextAlign.left,
             ),
             error: (_, __) => Text(
-              'there !',
+              'there!',
               style: AppTheme.headingLarge.copyWith(
-                fontSize: 28 * fontMultiplier,
+                fontSize: 28,
                 fontWeight: FontWeight.w600,
-                height: 1.2,
                 color: AppTheme.primaryText,
               ),
-              textAlign: TextAlign.left,
             ),
           ),
         ],
@@ -658,7 +698,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Watch async providers to ensure services are initialized
     final databaseServiceAsync = ref.watch(asyncDatabaseServiceProvider);
     final preferencesServiceAsync = ref.watch(asyncPreferencesServiceProvider);
 
@@ -670,48 +709,48 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             title: AppConstants.appName,
             showShareButton: true,
           ),
-          body: Column(
-            children: [
-              // Personalized greeting
-              _buildGreeting(),
+          body: SafeArea(
+            child: Column(
+              children: [
+                // Personalized greeting
+                _buildGreeting(),
 
-              // Tab bar
-              _buildTabBar(),
+                // Tab bar
+                _buildTabBar(),
 
-              const SizedBox(height: AppTheme.spacingM),
+                const SizedBox(height: AppTheme.spacingM),
 
-              // Tab view
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildTaskList(false), // Everyday tasks
-                    _buildTaskList(true), // Routine tasks
-                  ],
-                ),
-              ),
-            ],
-          ),
-          floatingActionButton: Semantics(
-            label: 'Add new task',
-            hint: 'Tap to create a new task',
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppTheme.greyPrimary,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _onAddTask,
-                  borderRadius: BorderRadius.circular(16),
-                  child: const Icon(
-                    Icons.add,
-                    color: AppTheme.primaryText,
-                    size: 24,
+                // Tab view
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildTaskList(
+                          false), // Everyday tasks with new container design
+                      _buildTaskList(true), // Routine tasks with old design
+                    ],
                   ),
+                ),
+              ],
+            ),
+          ),
+          floatingActionButton: Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppTheme.greyPrimary,
+              borderRadius: BorderRadius.circular(AppTheme.buttonBorderRadius),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _onAddTask,
+                borderRadius:
+                    BorderRadius.circular(AppTheme.buttonBorderRadius),
+                child: const Icon(
+                  Icons.add,
+                  color: AppTheme.primaryText,
+                  size: 24,
                 ),
               ),
             ),
@@ -727,37 +766,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ),
         error: (error, stackTrace) => Scaffold(
           backgroundColor: AppTheme.backgroundDark,
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  size: 48,
-                  color: Colors.red.shade400,
-                ),
-                const SizedBox(height: AppTheme.spacingM),
-                Text(
-                  'Failed to initialize preferences service',
-                  style: AppTheme.bodyLarge.copyWith(
-                    color: AppTheme.secondaryText,
+          body: SafeArea(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: Colors.red.shade400,
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppTheme.spacingL),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    ref.invalidate(asyncPreferencesServiceProvider);
-                    ref.invalidate(asyncDatabaseServiceProvider);
-                  },
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.greyPrimary,
-                    foregroundColor: AppTheme.primaryText,
+                  const SizedBox(height: AppTheme.spacingM),
+                  Text(
+                    'Failed to initialize preferences service',
+                    style: AppTheme.bodyLarge.copyWith(
+                      color: AppTheme.secondaryText,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                ),
-              ],
+                  const SizedBox(height: AppTheme.spacingL),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      ref.invalidate(asyncPreferencesServiceProvider);
+                      ref.invalidate(asyncDatabaseServiceProvider);
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.greyPrimary,
+                      foregroundColor: AppTheme.primaryText,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -772,42 +813,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
       error: (error, stackTrace) => Scaffold(
         backgroundColor: AppTheme.backgroundDark,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 48,
-                color: Colors.red.shade400,
-              ),
-              const SizedBox(height: AppTheme.spacingM),
-              Text(
-                'Failed to initialize database service',
-                style: AppTheme.bodyLarge.copyWith(
-                  color: AppTheme.secondaryText,
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: Colors.red.shade400,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppTheme.spacingL),
-              ElevatedButton.icon(
-                onPressed: () {
-                  ref.invalidate(asyncDatabaseServiceProvider);
-                  ref.invalidate(asyncPreferencesServiceProvider);
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.greyPrimary,
-                  foregroundColor: AppTheme.primaryText,
+                const SizedBox(height: AppTheme.spacingM),
+                Text(
+                  'Failed to initialize database service',
+                  style: AppTheme.bodyLarge.copyWith(
+                    color: AppTheme.secondaryText,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-            ],
+                const SizedBox(height: AppTheme.spacingL),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    ref.invalidate(asyncDatabaseServiceProvider);
+                    ref.invalidate(asyncPreferencesServiceProvider);
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.greyPrimary,
+                    foregroundColor: AppTheme.primaryText,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 }
-
-

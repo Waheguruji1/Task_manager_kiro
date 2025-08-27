@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:device_preview/device_preview.dart';
 import 'utils/theme.dart';
 import 'utils/constants.dart';
 import 'utils/error_handler.dart';
@@ -13,7 +15,7 @@ import 'providers/provider_observer.dart';
 void main() {
   // Ensure Flutter binding is initialized
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Set up global error handling
   FlutterError.onError = (FlutterErrorDetails details) {
     ErrorHandler.logError(
@@ -23,7 +25,7 @@ void main() {
       type: ErrorType.unknown,
     );
   };
-  
+
   // Set system UI overlay style for status bar and navigation bar
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -33,11 +35,14 @@ void main() {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
-  
+
   runApp(
-    ProviderScope(
-      observers: [AppProviderObserver()],
-      child: const TaskManagerApp(),
+    DevicePreview(
+      enabled: !kReleaseMode, // Only enable in debug mode
+      builder: (context) => ProviderScope(
+        observers: [AppProviderObserver()],
+        child: const TaskManagerApp(),
+      ),
     ),
   );
 }
@@ -51,27 +56,33 @@ class TaskManagerApp extends StatelessWidget {
       // App Configuration
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      
+
       // Theme Configuration
       theme: AppTheme.darkTheme,
       themeMode: ThemeMode.dark,
-      
+
       // Navigation Configuration
       home: const AppInitializer(),
       routes: {
         '/welcome': (context) => const WelcomeScreen(),
         '/main': (context) => const MainNavigationScreen(),
       },
-      
+
       // Default route for undefined routes
       onUnknownRoute: (settings) {
         return MaterialPageRoute(
           builder: (context) => const WelcomeScreen(),
         );
       },
-      
-      // App-wide configuration
+
+      // Device Preview configuration
+      locale: DevicePreview.locale(context),
+
+      // App-wide configuration with Device Preview support
       builder: (context, child) {
+        // Apply Device Preview wrapper first
+        child = DevicePreview.appBuilder(context, child);
+
         return MediaQuery(
           // Ensure text scaling doesn't break the UI
           data: MediaQuery.of(context).copyWith(
@@ -79,7 +90,7 @@ class TaskManagerApp extends StatelessWidget {
               MediaQuery.of(context).textScaler.scale(1.0).clamp(0.8, 1.2),
             ),
           ),
-          child: child!,
+          child: child,
         );
       },
     );
@@ -87,7 +98,7 @@ class TaskManagerApp extends StatelessWidget {
 }
 
 /// App Initializer Widget
-/// 
+///
 /// Handles initial app setup and navigation logic based on user data.
 /// Checks for existing username and navigates to appropriate screen.
 class AppInitializer extends ConsumerStatefulWidget {
@@ -97,7 +108,8 @@ class AppInitializer extends ConsumerStatefulWidget {
   ConsumerState<AppInitializer> createState() => _AppInitializerState();
 }
 
-class _AppInitializerState extends ConsumerState<AppInitializer> with WidgetsBindingObserver {
+class _AppInitializerState extends ConsumerState<AppInitializer>
+    with WidgetsBindingObserver {
   bool _hasError = false;
   String? _errorMessage;
 
@@ -117,7 +129,7 @@ class _AppInitializerState extends ConsumerState<AppInitializer> with WidgetsBin
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    
+
     switch (state) {
       case AppLifecycleState.resumed:
         // App is resumed, could check for routine task resets here
@@ -140,14 +152,11 @@ class _AppInitializerState extends ConsumerState<AppInitializer> with WidgetsBin
 
   /// Handle app resumed state
   void _handleAppResumed() {
-    // Could implement routine task reset logic here
-    // For now, just log the event
     debugPrint('App resumed');
   }
 
   /// Handle app paused state
   void _handleAppPaused() {
-    // Could save any pending data here
     debugPrint('App paused');
   }
 
@@ -155,11 +164,14 @@ class _AppInitializerState extends ConsumerState<AppInitializer> with WidgetsBin
   void _handleAppDetached() async {
     // Cleanup database connection when app is terminated
     try {
-      final databaseService = await ref.read(asyncDatabaseServiceProvider.future);
+      final databaseService =
+          await ref.read(asyncDatabaseServiceProvider.future);
       await databaseService.close();
-      ErrorHandler.logError('Database connection closed successfully', context: 'App lifecycle', type: ErrorType.unknown);
+      ErrorHandler.logError('Database connection closed successfully',
+          context: 'App lifecycle', type: ErrorType.unknown);
     } catch (e) {
-      ErrorHandler.logError(e, context: 'Close database on app detached', type: ErrorType.database);
+      ErrorHandler.logError(e,
+          context: 'Close database on app detached', type: ErrorType.database);
     }
   }
 
@@ -169,24 +181,24 @@ class _AppInitializerState extends ConsumerState<AppInitializer> with WidgetsBin
       // Initialize services using Riverpod providers
       await ref.read(asyncDatabaseServiceProvider.future);
       await ref.read(asyncPreferencesServiceProvider.future);
-      
+
       // Initialize notification service
       final notificationService = ref.read(notificationServiceProvider);
       await notificationService.initialize();
-      
+
       // Request notification permissions
       await notificationService.requestPermissions();
-      
+
       // Perform automatic cleanup of old completed tasks in the background
       // This runs asynchronously and doesn't block app initialization
       _performBackgroundCleanup();
-      
+
       // Check if user has already entered their name using provider
       final hasUserName = await ref.read(hasUserNameProvider.future);
-      
+
       // Add a small delay for smooth transition
       await Future.delayed(const Duration(milliseconds: 500));
-      
+
       if (mounted) {
         if (hasUserName) {
           // User exists, navigate to main screen
@@ -197,15 +209,17 @@ class _AppInitializerState extends ConsumerState<AppInitializer> with WidgetsBin
         }
       }
     } catch (e) {
-      ErrorHandler.logError(e, context: 'App initialization', type: ErrorType.database);
-      
+      ErrorHandler.logError(e,
+          context: 'App initialization', type: ErrorType.database);
+
       // On error, still try to navigate to welcome screen
       // This ensures the app doesn't get stuck on the loading screen
       if (mounted) {
         try {
           Navigator.of(context).pushReplacementNamed('/welcome');
         } catch (navigationError) {
-          ErrorHandler.logError(navigationError, context: 'Navigation fallback', type: ErrorType.unknown);
+          ErrorHandler.logError(navigationError,
+              context: 'Navigation fallback', type: ErrorType.unknown);
           // If navigation also fails, show error screen
           _showErrorScreen();
         }
@@ -214,7 +228,7 @@ class _AppInitializerState extends ConsumerState<AppInitializer> with WidgetsBin
   }
 
   /// Perform background cleanup of old completed tasks
-  /// 
+  ///
   /// This method runs asynchronously during app startup to clean up
   /// old completed everyday tasks without blocking the user interface.
   void _performBackgroundCleanup() {
@@ -225,10 +239,10 @@ class _AppInitializerState extends ConsumerState<AppInitializer> with WidgetsBin
           'Starting background task cleanup process',
           context: 'App initialization',
         );
-        
+
         // Trigger cleanup using the provider
         final cleanupResult = await ref.read(performCleanupProvider.future);
-        
+
         if (cleanupResult) {
           ErrorHandler.logInfo(
             'Background task cleanup completed successfully',
@@ -284,17 +298,17 @@ class _AppInitializerState extends ConsumerState<AppInitializer> with WidgetsBin
               size: 80,
               isAnimating: !_hasError,
             ),
-            
+
             const SizedBox(height: AppTheme.spacingL),
-            
+
             // App name
             Text(
               AppConstants.appName,
               style: AppTheme.headingLarge,
             ),
-            
+
             const SizedBox(height: AppTheme.spacingXL),
-            
+
             // Show error or loading state
             if (_hasError) ...[
               // Error state
@@ -333,5 +347,3 @@ class _AppInitializerState extends ConsumerState<AppInitializer> with WidgetsBin
     );
   }
 }
-
-

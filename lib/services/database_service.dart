@@ -396,8 +396,7 @@ class DatabaseService {
   Future<List<Task>> getTodaysRoutineTasks() async {
     try {
       final routineTasks = await getRoutineTasks();
-      // For now, return all routine tasks as they should appear in everyday tasks
-      // In a more complex implementation, you might filter by date or other criteria
+      // Return all routine tasks for everyday tasks display
       return routineTasks;
     } catch (e) {
       ErrorHandler.logError(e, context: 'Get today\'s routine tasks', type: ErrorType.database);
