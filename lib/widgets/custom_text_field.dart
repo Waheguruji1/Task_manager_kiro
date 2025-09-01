@@ -22,6 +22,7 @@ class CustomTextField extends StatelessWidget {
   final EdgeInsetsGeometry? contentPadding;
   final bool autofocus;
   final FocusNode? focusNode;
+  final TextStyle? style;
 
   const CustomTextField({
     Key? key,
@@ -41,6 +42,7 @@ class CustomTextField extends StatelessWidget {
     this.contentPadding,
     this.autofocus = false,
     this.focusNode,
+    this.style,
   }) : super(key: key);
 
   @override
@@ -57,7 +59,7 @@ class CustomTextField extends StatelessWidget {
       onTap: onTap,
       autofocus: autofocus,
       focusNode: focusNode,
-      style: AppTheme.bodyLarge,
+      style: style ?? AppTheme.bodyLarge,
       decoration: InputDecoration(
         hintText: hintText,
         labelText: labelText,

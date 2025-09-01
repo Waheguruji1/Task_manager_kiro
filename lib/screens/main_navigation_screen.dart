@@ -5,6 +5,7 @@ import '../utils/theme.dart';
 import 'home_screen.dart';
 import 'settings_screen.dart';
 import 'stats_screen.dart';
+import 'achievements_screen.dart';
 
 /// Main Navigation Screen with iOS-style bottom tab bar
 /// 
@@ -23,6 +24,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   final List<Widget> _screens = [
     const HomeScreen(),
     const StatsScreen(),
+    const AchievementsScreen(),
     const SettingsScreen(),
   ];
 
@@ -50,6 +52,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         child: const Icon(CupertinoIcons.chart_bar_fill),
       ),
       label: 'Stats',
+    ),
+    BottomNavigationBarItem(
+      icon: Semantics(
+        label: 'Achievements tab',
+        hint: 'Navigate to achievements screen',
+        child: const Icon(CupertinoIcons.star),
+      ),
+      activeIcon: Semantics(
+        label: 'Achievements tab active',
+        child: const Icon(CupertinoIcons.star_fill),
+      ),
+      label: 'Achievements',
     ),
     BottomNavigationBarItem(
       icon: Semantics(

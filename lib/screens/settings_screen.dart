@@ -584,9 +584,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(
-            AppTheme.spacingM,
+            AppTheme.spacingS,
             AppTheme.spacingL,
-            AppTheme.spacingM,
+            AppTheme.spacingS,
             AppTheme.spacingS,
           ),
           child: Text(
@@ -598,7 +598,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ),
         Container(
-          margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingM),
+          margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingS),
           decoration: BoxDecoration(
             color: AppTheme.surfaceGrey,
             borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
@@ -816,7 +816,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final userNameAsync = ref.watch(userNameProvider);
-    final responsivePadding = ResponsiveUtils.getScreenPadding(context);
+    final responsivePadding = ResponsiveUtils.getOptimalMobilePadding(context);
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundDark,
@@ -824,7 +824,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: SingleChildScrollView(
           child: Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: responsivePadding.horizontal / 2,
+              horizontal: responsivePadding.horizontal,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

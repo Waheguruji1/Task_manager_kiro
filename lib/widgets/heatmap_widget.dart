@@ -12,16 +12,16 @@ class HeatmapWidget extends StatefulWidget {
   final double spacing;
 
   const HeatmapWidget({
-    Key? key,
+    super.key,
     required this.data,
     required this.baseColor,
     required this.title,
     this.onCellTap,
     this.tooltipBuilder,
     this.isMultiValue = false,
-    this.cellSize = 12.0,
-    this.spacing = 2.0,
-  }) : super(key: key);
+    this.cellSize = 14.0,
+    this.spacing = 3.0,
+  });
 
   @override
   State<HeatmapWidget> createState() => _HeatmapWidgetState();
@@ -30,6 +30,7 @@ class HeatmapWidget extends StatefulWidget {
 class _HeatmapWidgetState extends State<HeatmapWidget> {
   OverlayEntry? _overlayEntry;
   final GlobalKey _containerKey = GlobalKey();
+  DateTime _selectedMonth = DateTime.now();
 
   @override
   void dispose() {
@@ -139,11 +140,7 @@ class _HeatmapWidgetState extends State<HeatmapWidget> {
         height: widget.cellSize,
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(2),
-          border: Border.all(
-            color: Colors.grey.shade700,
-            width: 0.5,
-          ),
+          borderRadius: BorderRadius.circular(3),
         ),
       ),
     );
@@ -155,20 +152,31 @@ class _HeatmapWidgetState extends State<HeatmapWidget> {
     final firstWeekday = firstDayOfMonth.weekday % 7; // 0 = Sunday
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Month label
-        Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Text(
-            DateFormat('MMM').format(month),
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-            ),
+        // Weekday headers
+        SizedBox(
+          width: 7 * (widget.cellSize + widget.spacing) - widget.spacing,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+                .map((day) => SizedBox(
+                      width: widget.cellSize,
+                      child: Text(
+                        day,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFF8E8E93),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ))
+                .toList(),
           ),
         ),
+        const SizedBox(height: 8),
+        
         // Calendar grid
         SizedBox(
           width: 7 * (widget.cellSize + widget.spacing) - widget.spacing,
@@ -199,79 +207,116 @@ class _HeatmapWidgetState extends State<HeatmapWidget> {
     );
   }
 
-  Widget _buildYearView() {
-    final now = DateTime.now();
-    final currentYear = now.year;
-    
-    // Generate months for the current year
-    final months = List.generate(12, (index) => DateTime(currentYear, index + 1, 1));
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Year label
-        Text(
-          currentYear.toString(),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
+  Widget _buildMonthPicker() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: GestureDetector(
+        onTap: _showMonthPicker,
+        child: Row(
+          children: [
+            Text(
+              DateFormat('MMMM yyyy').format(_selectedMonth),
+              style: const TextStyle(
+                color: Color(0xFF8E8E93),
+                fontSize: 16,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            const Spacer(),
+            const Icon(
+              Icons.calendar_month,
+              color: Color(0xFF8E8E93),
+              size: 20,
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
-        // Months grid
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
-          children: months.map((month) => _buildMonthGrid(month)).toList(),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildLegend() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text(
-          'Less',
-          style: TextStyle(
-            color: Colors.white70,
-            fontSize: 10,
+  void _showMonthPicker() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedMonth,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFF6B7280),
+              onPrimary: Colors.white,
+              surface: Color(0xFF1C1C1E),
+              onSurface: Colors.white,
+            ),
           ),
-        ),
-        const SizedBox(width: 4),
-        ...List.generate(5, (index) {
-          final intensity = index / 4.0;
-          final color = Color.lerp(
-            Colors.grey.shade800,
-            widget.baseColor,
-            intensity,
-          )!;
-          
-          return Container(
-            width: widget.cellSize,
-            height: widget.cellSize,
-            margin: EdgeInsets.symmetric(horizontal: widget.spacing / 2),
+          child: child!,
+        );
+      },
+    );
+    
+    if (picked != null && picked != _selectedMonth) {
+      setState(() {
+        _selectedMonth = DateTime(picked.year, picked.month, 1);
+      });
+    }
+  }
+
+  Widget _buildSelectedMonthView() {
+    return _buildMonthGrid(_selectedMonth);
+  }
+
+  Widget _buildLegend() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'low',
+                style: TextStyle(
+                  color: Color(0xFF8E8E93),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+              const Text(
+                'high',
+                style: TextStyle(
+                  color: Color(0xFF8E8E93),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            height: 8,
             decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
-              border: Border.all(
-                color: Colors.grey.shade700,
-                width: 0.5,
+              borderRadius: BorderRadius.circular(4),
+              gradient: LinearGradient(
+                colors: [
+                  Colors.grey.shade800,
+                  widget.baseColor.withValues(alpha: 0.3),
+                  widget.baseColor.withValues(alpha: 0.6),
+                  widget.baseColor,
+                ],
               ),
             ),
-          );
-        }),
-        const SizedBox(width: 4),
-        const Text(
-          'More',
-          style: TextStyle(
-            color: Colors.white70,
-            fontSize: 10,
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -281,36 +326,75 @@ class _HeatmapWidgetState extends State<HeatmapWidget> {
       onTap: _removeTooltip,
       child: Container(
         key: _containerKey,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.grey.shade900,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: Colors.white,
-            width: 1,
-          ),
+          color: const Color(0xFF1C1C1E),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title
-            Text(
-              widget.title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+            // Title with info icon
+            Row(
+              children: [
+                Text(
+                  widget.title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 23,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF8E8E93),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.info_outline,
+                    color: Colors.white,
+                    size: 12,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            
+            // Month picker
+            _buildMonthPicker(),
+            const SizedBox(height: 20),
+            
+            // Heatmap container
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF000000),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: _buildSelectedMonthView(),
               ),
             ),
-            const SizedBox(height: 16),
-            // Heatmap
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: _buildYearView(),
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
+            
             // Legend
             _buildLegend(),
+            const SizedBox(height: 16),
+            
+            // Completion Status label
+            const Center(
+              child: Text(
+                'Completion Status',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -299,10 +299,10 @@ class AppDatabase extends _$AppDatabase {
 
   /// Retrieves all everyday (non-routine) tasks
   /// 
-  /// Returns tasks that are not marked as routine, ordered by creation date
+  /// Returns tasks that are not marked as routine and are not routine task instances, ordered by creation date
   Future<List<TaskData>> getEverydayTasks() {
     return (select(tasks)
-      ..where((t) => t.isRoutine.equals(false))
+      ..where((t) => t.isRoutine.equals(false) & t.routineTaskId.isNull())
       ..orderBy([
         (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)
       ])).get();
@@ -310,10 +310,10 @@ class AppDatabase extends _$AppDatabase {
 
   /// Retrieves all everyday (non-routine) tasks sorted by priority
   /// 
-  /// Returns tasks that are not marked as routine, ordered by priority (High → Medium → None) then by creation date
+  /// Returns tasks that are not marked as routine and are not routine task instances, ordered by priority (High → Medium → None) then by creation date
   Future<List<TaskData>> getEverydayTasksSortedByPriority() {
     return (select(tasks)
-      ..where((t) => t.isRoutine.equals(false))
+      ..where((t) => t.isRoutine.equals(false) & t.routineTaskId.isNull())
       ..orderBy([
         (t) => OrderingTerm(expression: t.priority, mode: OrderingMode.desc), // Higher priority values first
         (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)

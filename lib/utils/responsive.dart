@@ -37,26 +37,31 @@ class ResponsiveUtils {
     return MediaQuery.of(context).orientation == Orientation.portrait;
   }
   
-  /// Get responsive padding based on screen size
+  /// Get responsive padding based on screen size - optimized for mobile
   static EdgeInsets getScreenPadding(BuildContext context) {
     final screenSize = getScreenSize(context);
     final isLandscapeMode = isLandscape(context);
+    final screenWidth = MediaQuery.of(context).size.width;
     
     switch (screenSize) {
       case ScreenSize.mobile:
+        // Minimal padding for mobile to maximize content space
         return EdgeInsets.symmetric(
-          horizontal: isLandscapeMode ? 24.0 : 16.0,
-          vertical: isLandscapeMode ? 12.0 : 16.0,
+          horizontal: isLandscapeMode ? 16.0 : 12.0,
+          vertical: isLandscapeMode ? 8.0 : 12.0,
         );
       case ScreenSize.tablet:
+        // Moderate padding for tablets
         return EdgeInsets.symmetric(
-          horizontal: isLandscapeMode ? 48.0 : 32.0,
-          vertical: isLandscapeMode ? 16.0 : 24.0,
+          horizontal: isLandscapeMode ? 32.0 : 24.0,
+          vertical: isLandscapeMode ? 12.0 : 16.0,
         );
       case ScreenSize.desktop:
+        // Larger padding for desktop with max content width constraint
+        final horizontalPadding = (screenWidth - maxContentWidth) / 2;
         return EdgeInsets.symmetric(
-          horizontal: isLandscapeMode ? 64.0 : 48.0,
-          vertical: isLandscapeMode ? 24.0 : 32.0,
+          horizontal: horizontalPadding.clamp(32.0, 120.0),
+          vertical: isLandscapeMode ? 16.0 : 24.0,
         );
     }
   }
@@ -200,6 +205,21 @@ class ResponsiveUtils {
     return safePadding;
   }
   
+  /// Get optimal padding for mobile screens to maximize content space
+  static EdgeInsets getOptimalMobilePadding(BuildContext context) {
+    final screenSize = getScreenSize(context);
+    final isLandscapeMode = isLandscape(context);
+    
+    if (screenSize == ScreenSize.mobile) {
+      return EdgeInsets.symmetric(
+        horizontal: isLandscapeMode ? 12.0 : 8.0,
+        vertical: isLandscapeMode ? 6.0 : 8.0,
+      );
+    }
+    
+    return getScreenPadding(context);
+  }
+
   /// Get responsive text truncation length based on screen size
   static int getTextTruncationLength(BuildContext context, {int baseLength = 50}) {
     final screenSize = getScreenSize(context);

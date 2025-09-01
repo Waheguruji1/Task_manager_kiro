@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/custom_app_bar.dart';
-import '../widgets/add_task_dialog.dart';
+import '../widgets/modern_add_task_dialog.dart';
 import '../models/task.dart';
 import '../utils/theme.dart';
 import '../utils/constants.dart';
@@ -24,18 +24,41 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with TickerProviderStateMixin {
   late TabController _tabController;
+  DateTime _lastCheckedDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _initializeDailyTasks();
+    _startDateChecker();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  /// Start checking for date changes to refresh UI
+  void _startDateChecker() {
+    // Check every minute if the date has changed
+    Future.delayed(const Duration(minutes: 1), () {
+      if (mounted) {
+        final now = DateTime.now();
+        final currentDate = DateTime(now.year, now.month, now.day);
+        final lastDate = DateTime(_lastCheckedDate.year, _lastCheckedDate.month, _lastCheckedDate.day);
+        
+        if (currentDate != lastDate) {
+          _lastCheckedDate = now;
+          // Refresh tasks when date changes
+          ref.invalidate(taskStateStreamProvider);
+          _initializeDailyTasks();
+        }
+        
+        _startDateChecker(); // Continue checking
+      }
+    });
   }
 
   /// Initialize daily routine tasks if needed
@@ -66,6 +89,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               'Daily routine task instances created successfully for $todayString',
               context: 'Daily reset',
               type: ErrorType.unknown);
+          
+          // Refresh task state after creating new instances
+          ref.invalidate(taskStateStreamProvider);
         } else {
           ErrorHandler.logError('Failed to create daily routine task instances',
               context: 'Daily reset', type: ErrorType.database);
@@ -113,7 +139,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   /// Handle task edit
   Future<void> _onTaskEdit(Task task) async {
-    final result = await showEditTaskDialog(
+    final result = await showModernEditTaskDialog(
       context,
       task: task,
       onTaskSaved: () {
@@ -198,7 +224,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   /// Build tab bar - iOS Style
   Widget _buildTabBar() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingM),
+      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingS),
       decoration: BoxDecoration(
         color: AppTheme.surfaceGrey,
         borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
@@ -242,7 +268,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  /// Get date label for task container
+  /// Get date label for task container - always relative to current date
   String _getDateLabel(DateTime date) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -258,21 +284,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
   }
 
-  /// Group tasks by date
+  /// Group tasks by date - dynamically based on current date relationship
   Map<DateTime, List<Task>> _groupTasksByDate(List<Task> tasks) {
     final Map<DateTime, List<Task>> groupedTasks = {};
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
 
     for (final task in tasks) {
-      final taskDate = DateTime(
+      final taskCreatedDate = DateTime(
         task.createdAt.year,
         task.createdAt.month,
         task.createdAt.day,
       );
 
-      if (groupedTasks[taskDate] == null) {
-        groupedTasks[taskDate] = [];
+      // Determine which date group this task should belong to
+      DateTime groupDate;
+      
+      // If task was created today, group under today
+      if (taskCreatedDate == today) {
+        groupDate = today;
+      } 
+      // If task was created yesterday, group under yesterday
+      else if (taskCreatedDate == today.subtract(const Duration(days: 1))) {
+        groupDate = today.subtract(const Duration(days: 1));
       }
-      groupedTasks[taskDate]!.add(task);
+      // For older tasks, group by their actual creation date
+      else {
+        groupDate = taskCreatedDate;
+      }
+
+      if (groupedTasks[groupDate] == null) {
+        groupedTasks[groupDate] = [];
+      }
+      groupedTasks[groupDate]!.add(task);
     }
 
     return groupedTasks;
@@ -282,8 +326,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget _buildTaskContainer(DateTime date, List<Task> tasks) {
     return Container(
       margin: const EdgeInsets.only(
-        left: AppTheme.spacingM,
-        right: AppTheme.spacingM,
+        left: AppTheme.spacingS,
+        right: AppTheme.spacingS,
         bottom: AppTheme.spacingL,
       ),
       decoration: BoxDecoration(
@@ -474,7 +518,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           }
 
           return Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingM),
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingS),
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingM),
               itemCount: tasks.length,
@@ -494,8 +538,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           );
         } else {
           // For everyday tasks, show new container layout
-          final everydayTasks =
-              taskState.everydayTasks.where((task) => !task.isRoutine).toList();
+          final everydayTasks = taskState.everydayTasks;
 
           if (everydayTasks.isEmpty) {
             return _buildEmptyState(isRoutineTab);
@@ -611,7 +654,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Future<void> _onAddTask() async {
     final isRoutineTab = _tabController.index == 1;
 
-    final result = await showAddTaskDialog(
+    final result = await showModernAddTaskDialog(
       context,
       isRoutineTask: isRoutineTab,
       onTaskSaved: () {
@@ -642,9 +685,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
+        AppTheme.spacingS,
         AppTheme.spacingM,
-        AppTheme.spacingM,
-        AppTheme.spacingM,
+        AppTheme.spacingS,
         AppTheme.spacingL,
       ),
       child: Column(

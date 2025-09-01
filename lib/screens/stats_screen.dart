@@ -437,7 +437,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
   @override
   Widget build(BuildContext context) {
     final allTasksAsync = ref.watch(allTasksProvider);
-    final responsivePadding = ResponsiveUtils.getScreenPadding(context);
+    final responsivePadding = ResponsiveUtils.getOptimalMobilePadding(context);
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundDark,
@@ -486,7 +486,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                         if (tasks.isEmpty)
                           Padding(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: AppTheme.spacingM,
+                              horizontal: AppTheme.spacingS,
                             ),
                             child: Container(
                               padding: const EdgeInsets.all(AppTheme.spacingM),
@@ -520,7 +520,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                         // Weekly Stats
                         Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: AppTheme.spacingM,
+                            horizontal: AppTheme.spacingS,
                           ),
                           child: _buildStatCard(
                             title: 'Completed This Week',
@@ -536,7 +536,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                         // Today's Stats Row
                         Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: AppTheme.spacingM,
+                            horizontal: AppTheme.spacingS,
                           ),
                           child: Row(
                             children: [
@@ -574,7 +574,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                         // Progress Bar
                         Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: AppTheme.spacingM,
+                            horizontal: AppTheme.spacingS,
                           ),
                           child: _buildProgressBar(
                             title: 'Overall Completion',
@@ -587,7 +587,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                         // Heatmap Section
                         Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: AppTheme.spacingM,
+                            horizontal: AppTheme.spacingS,
                           ),
                           child: _buildActivityHeatmap(effectiveTasks),
                         ),

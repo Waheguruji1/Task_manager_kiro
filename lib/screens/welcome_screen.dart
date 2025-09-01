@@ -44,9 +44,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
     try {
       final name = _nameController.text.trim();
-      
+
       // Get the user state notifier from Riverpod
-      final userStateNotifier = await ref.read(asyncUserStateNotifierProvider.future);
+      final userStateNotifier =
+          await ref.read(asyncUserStateNotifierProvider.future);
       final success = await userStateNotifier.saveUserName(name);
 
       if (success && mounted) {
@@ -176,14 +177,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   Widget build(BuildContext context) {
     // Watch user state async provider for initialization
     final userStateAsync = ref.watch(asyncUserStateNotifierProvider);
-    
+
     return userStateAsync.when(
       data: (userStateNotifier) => Scaffold(
         backgroundColor: AppTheme.backgroundDark,
         body: SafeArea(
           child: SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.all(AppTheme.screenPadding),
+              padding: const EdgeInsets.all(AppTheme.spacingS),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,

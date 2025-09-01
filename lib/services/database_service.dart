@@ -89,25 +89,16 @@ class DatabaseService {
     }
   }
   
-  /// Read everyday tasks (includes regular tasks and daily routine task instances)
+  /// Read everyday tasks (only regular non-routine tasks)
   Future<List<Task>> getEverydayTasks() async {
     try {
-      final today = DateTime.now();
-      final todayStart = DateTime(today.year, today.month, today.day);
-      
-      // Get regular everyday tasks (non-routine tasks)
+      // Get only regular everyday tasks (non-routine tasks without routineTaskId)
       final regularTasksQuery = _database!.select(_database!.tasks)
-        ..where((t) => t.isRoutine.equals(false) & t.routineTaskId.isNull());
+        ..where((t) => t.isRoutine.equals(false) & t.routineTaskId.isNull())
+        ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]);
       final regularTasks = await regularTasksQuery.get();
       
-      // Get today's routine task instances
-      final routineInstancesQuery = _database!.select(_database!.tasks)
-        ..where((t) => t.routineTaskId.isNotNull() & t.taskDate.equals(todayStart));
-      final routineInstances = await routineInstancesQuery.get();
-      
-      // Combine both lists
-      final allTasks = [...regularTasks, ...routineInstances];
-      return allTasks.map((taskData) => _taskDataToTask(taskData)).toList();
+      return regularTasks.map((taskData) => _taskDataToTask(taskData)).toList();
     } catch (e) {
       ErrorHandler.logError(e, context: 'Get everyday tasks', type: ErrorType.database);
       throw AppException(
@@ -318,7 +309,7 @@ class DatabaseService {
             description: Value(routineTask.description),
             isCompleted: const Value(false),
             isRoutine: const Value(false), // Instance is not a routine task itself
-            createdAt: Value(DateTime.now()),
+            createdAt: Value(todayStart), // Use today's date for proper grouping
             completedAt: const Value(null),
             routineTaskId: Value(routineTask.id),
             taskDate: Value(todayStart),
