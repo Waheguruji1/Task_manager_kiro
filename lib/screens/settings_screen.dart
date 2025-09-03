@@ -22,6 +22,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _isUpdatingNotifications = false;
   bool _isSendingTestNotification = false;
   bool _isCheckingServiceStatus = false;
+  bool _isUpdatingAutoDelete = false;
 
   /// Handle clear all data
   Future<void> _handleClearAllData() async {
@@ -286,6 +287,75 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           context,
           'Failed to schedule test notification: ${e.toString()}',
         );
+      }
+    }
+  }
+
+  /// Handle auto-delete toggle
+  Future<void> _handleAutoDeleteToggle(bool enabled) async {
+    if (_isUpdatingAutoDelete) return;
+
+    setState(() {
+      _isUpdatingAutoDelete = true;
+    });
+
+    try {
+      final prefsService = await ref.read(asyncPreferencesServiceProvider.future);
+      
+      // Update the setting
+      await prefsService.setAutoDeleteEnabled(enabled);
+
+      // If auto-delete is being enabled after being disabled, perform immediate cleanup
+      if (enabled) {
+        final cleanupService = ref.read(taskCleanupServiceProvider);
+        final dbService = await ref.read(asyncDatabaseServiceProvider.future);
+        
+        // Perform immediate cleanup of tasks older than 3 months
+        final cleanupSuccess = await cleanupService.performImmediateCleanup(dbService);
+        
+        if (cleanupSuccess) {
+          // Refresh task providers to reflect cleanup
+          ref.invalidate(allTasksProvider);
+          ref.invalidate(taskChangeNotifierProvider);
+          
+          if (mounted) {
+            ErrorHandler.showSuccessSnackBar(
+              context,
+              'Auto-delete enabled. Old completed tasks have been cleaned up.',
+            );
+          }
+        } else {
+          if (mounted) {
+            ErrorHandler.showSuccessSnackBar(
+              context,
+              'Auto-delete enabled, but cleanup encountered some issues.',
+            );
+          }
+        }
+      } else {
+        if (mounted) {
+          ErrorHandler.showSuccessSnackBar(
+            context,
+            'Auto-delete disabled. Your completed tasks will be preserved.',
+          );
+        }
+      }
+
+      // Refresh the provider
+      ref.invalidate(autoDeleteEnabledProvider);
+
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context,
+          'Failed to update auto-delete setting: ${e.toString()}',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdatingAutoDelete = false;
+        });
       }
     }
   }
@@ -1053,6 +1123,47 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 _buildSettingsSection(
                   title: 'Data',
                   children: [
+                    // Auto-delete toggle
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final autoDeleteAsync = ref.watch(autoDeleteEnabledProvider);
+                        
+                        return autoDeleteAsync.when(
+                          data: (isEnabled) => _buildNotificationToggleItem(
+                            icon: Icons.auto_delete,
+                            title: 'Auto-Delete Old Tasks',
+                            subtitle: 'Automatically delete completed tasks older than 2 months',
+                            value: isEnabled,
+                            onChanged: _handleAutoDeleteToggle,
+                            isLoading: _isUpdatingAutoDelete,
+                          ),
+                          loading: () => _buildNotificationToggleItem(
+                            icon: Icons.auto_delete,
+                            title: 'Auto-Delete Old Tasks',
+                            subtitle: 'Automatically delete completed tasks older than 2 months',
+                            value: true,
+                            onChanged: (_) {},
+                            isLoading: true,
+                          ),
+                          error: (_, __) => _buildNotificationToggleItem(
+                            icon: Icons.auto_delete,
+                            title: 'Auto-Delete Old Tasks',
+                            subtitle: 'Automatically delete completed tasks older than 2 months',
+                            value: true,
+                            onChanged: _handleAutoDeleteToggle,
+                            isLoading: false,
+                          ),
+                        );
+                      },
+                    ),
+                    
+                    // Divider
+                    Container(
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingM),
+                      color: AppTheme.borderWhite.withValues(alpha: 0.1),
+                    ),
+                    
                     _buildSettingsItem(
                       icon: Icons.delete_forever,
                       title: 'Clear All Data',

@@ -333,12 +333,23 @@ class TaskCleanupService {
   /// 
   /// [databaseService] The database service instance
   /// [minimumTasksForCleanup] Minimum number of old tasks before cleanup is triggered
+  /// [isAutoDeleteEnabled] Whether auto-delete is enabled by user
   /// Returns true if cleanup was performed or not needed, false if cleanup failed
   Future<bool> performCleanupIfNeeded(
     DatabaseService databaseService, {
     int minimumTasksForCleanup = 10,
+    bool isAutoDeleteEnabled = true,
   }) async {
     try {
+      // Check if auto-delete is enabled
+      if (!isAutoDeleteEnabled) {
+        ErrorHandler.logInfo(
+          'Auto-delete is disabled by user, skipping cleanup',
+          context: 'TaskCleanupService',
+        );
+        return true;
+      }
+
       final allTasks = await databaseService.getAllTasks();
       
       if (!shouldPerformCleanup(allTasks, minimumTasksForCleanup: minimumTasksForCleanup)) {
@@ -354,6 +365,56 @@ class TaskCleanupService {
       ErrorHandler.logError(
         e,
         context: 'Perform cleanup if needed',
+        type: ErrorType.database,
+      );
+      return false;
+    }
+  }
+
+  /// Force cleanup of all tasks older than 3 months (for when auto-delete is re-enabled)
+  /// 
+  /// This method performs immediate cleanup of tasks older than 3 months,
+  /// useful when auto-delete is turned on after being disabled.
+  /// 
+  /// [databaseService] The database service instance
+  /// Returns true if cleanup was successful, false otherwise
+  Future<bool> performImmediateCleanup(DatabaseService databaseService) async {
+    try {
+      ErrorHandler.logInfo(
+        'Starting immediate cleanup of tasks older than 3 months',
+        context: 'TaskCleanupService',
+      );
+
+      // Get all tasks to analyze for cleanup
+      final allTasks = await databaseService.getAllTasks();
+      
+      // Use 3-month threshold for immediate cleanup
+      final threeMonthsAgo = DateTime.now().subtract(const Duration(days: 90));
+      final tasksToCleanup = allTasks.where((task) => 
+        _shouldCleanupTask(task, threeMonthsAgo)
+      ).toList();
+      
+      if (tasksToCleanup.isEmpty) {
+        ErrorHandler.logInfo(
+          'No tasks found for immediate cleanup',
+          context: 'TaskCleanupService',
+        );
+        return true;
+      }
+
+      // Perform the actual cleanup
+      await cleanupOldTasks(tasksToCleanup, databaseService);
+      
+      ErrorHandler.logInfo(
+        'Immediate cleanup completed successfully. Cleaned up ${tasksToCleanup.length} tasks',
+        context: 'TaskCleanupService',
+      );
+      
+      return true;
+    } catch (e) {
+      ErrorHandler.logError(
+        e,
+        context: 'Immediate task cleanup process',
         type: ErrorType.database,
       );
       return false;

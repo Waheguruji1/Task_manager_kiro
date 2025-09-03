@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/database_service.dart';
 import '../services/preferences_service.dart';
@@ -231,20 +232,119 @@ final unearnedAchievementsProvider = FutureProvider<List<Achievement>>((ref) asy
 /// Completion Heatmap Data Provider
 /// 
 /// Provides heatmap data for task completion activity
-final completionHeatmapDataProvider = FutureProvider<Map<DateTime, int>>((ref) async {
+/// This provider automatically refreshes when task state changes
+final completionHeatmapDataProvider = FutureProvider.autoDispose<Map<DateTime, int>>((ref) async {
   final statsService = ref.watch(statsServiceProvider);
-  final tasks = await ref.watch(allTasksProvider.future);
-  return statsService.calculateCompletionHeatmapData(tasks);
+  
+  // Watch the task change notifier to ensure this provider refreshes
+  ref.watch(taskChangeNotifierProvider);
+  
+  // Watch the task state notifier to get real-time updates
+  try {
+    final taskStateNotifier = await ref.watch(asyncTaskStateNotifierProvider.future);
+    final taskState = taskStateNotifier.currentState;
+    final allTasks = [...taskState.everydayTasks, ...taskState.routineTasks];
+    return statsService.calculateCompletionHeatmapData(allTasks);
+  } catch (e) {
+    // Fallback to regular provider if task state notifier is not available
+    final tasks = await ref.watch(allTasksProvider.future);
+    return statsService.calculateCompletionHeatmapData(tasks);
+  }
 });
 
 /// Creation vs Completion Heatmap Data Provider
 /// 
 /// Provides heatmap data for task creation vs completion
-final creationCompletionHeatmapDataProvider = FutureProvider<Map<DateTime, Map<String, int>>>((ref) async {
+/// This provider automatically refreshes when task state changes
+final creationCompletionHeatmapDataProvider = FutureProvider.autoDispose<Map<DateTime, Map<String, int>>>((ref) async {
   final statsService = ref.watch(statsServiceProvider);
-  final tasks = await ref.watch(allTasksProvider.future);
-  return statsService.calculateCreationCompletionHeatmapData(tasks);
+  
+  // Watch the task change notifier to ensure this provider refreshes
+  ref.watch(taskChangeNotifierProvider);
+  
+  // Watch the task state notifier to get real-time updates
+  try {
+    final taskStateNotifier = await ref.watch(asyncTaskStateNotifierProvider.future);
+    final taskState = taskStateNotifier.currentState;
+    final allTasks = [...taskState.everydayTasks, ...taskState.routineTasks];
+    return statsService.calculateCreationCompletionHeatmapData(allTasks);
+  } catch (e) {
+    // Fallback to regular provider if task state notifier is not available
+    final tasks = await ref.watch(allTasksProvider.future);
+    return statsService.calculateCreationCompletionHeatmapData(tasks);
+  }
 });
+
+/// Real-time Stats Provider
+/// 
+/// Provides real-time statistics that update when tasks change
+final realtimeStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  final statsService = ref.watch(statsServiceProvider);
+  
+  // Watch the task change notifier to ensure this provider refreshes
+  ref.watch(taskChangeNotifierProvider);
+  
+  try {
+    final taskStateNotifier = await ref.watch(asyncTaskStateNotifierProvider.future);
+    final taskState = taskStateNotifier.currentState;
+    final allTasks = [...taskState.everydayTasks, ...taskState.routineTasks];
+    return statsService.calculateOverallStats(allTasks);
+  } catch (e) {
+    // Fallback to regular provider if task state notifier is not available
+    final tasks = await ref.watch(allTasksProvider.future);
+    return statsService.calculateOverallStats(tasks);
+  }
+});
+
+/// Task Change Notifier Provider
+/// 
+/// This provider watches for task state changes and invalidates stats providers
+final taskChangeNotifierProvider = StateNotifierProvider<TaskChangeNotifier, int>((ref) {
+  return TaskChangeNotifier(ref);
+});
+
+/// Task Change Notifier Class
+/// 
+/// Monitors task state changes and invalidates dependent providers
+class TaskChangeNotifier extends StateNotifier<int> {
+  final Ref _ref;
+  int _lastTaskCount = 0;
+  int _lastCompletedCount = 0;
+  
+  TaskChangeNotifier(this._ref) : super(0) {
+    _startMonitoring();
+  }
+  
+  void _startMonitoring() {
+    // Monitor task state changes every 200ms
+    Timer.periodic(const Duration(milliseconds: 200), (timer) async {
+      try {
+        final taskStateNotifier = await _ref.read(asyncTaskStateNotifierProvider.future);
+        final taskState = taskStateNotifier.currentState;
+        
+        final currentTaskCount = taskState.everydayTasks.length + taskState.routineTasks.length;
+        final currentCompletedCount = taskState.everydayTasks.where((t) => t.isCompleted).length +
+                                    taskState.routineTasks.where((t) => t.isCompleted).length;
+        
+        // Check if tasks or completion status changed
+        if (currentTaskCount != _lastTaskCount || currentCompletedCount != _lastCompletedCount) {
+          _lastTaskCount = currentTaskCount;
+          _lastCompletedCount = currentCompletedCount;
+          
+          // Invalidate stats providers to trigger refresh
+          _ref.invalidate(completionHeatmapDataProvider);
+          _ref.invalidate(creationCompletionHeatmapDataProvider);
+          _ref.invalidate(realtimeStatsProvider);
+          
+          // Update state to notify listeners
+          state = state + 1;
+        }
+      } catch (e) {
+        // Continue monitoring on error
+      }
+    });
+  }
+}
 
 /// Notification Service Provider
 /// 
@@ -269,6 +369,14 @@ final notificationPermissionStatusProvider = FutureProvider<bool>((ref) async {
   return await notificationService.areNotificationsEnabled();
 });
 
+/// Auto-Delete Enabled Provider
+/// 
+/// Provides the current auto-delete enabled status from SharedPreferences
+final autoDeleteEnabledProvider = FutureProvider<bool>((ref) async {
+  final prefsService = await ref.watch(asyncPreferencesServiceProvider.future);
+  return await prefsService.isAutoDeleteEnabled();
+});
+
 /// Task Cleanup Service Provider
 /// 
 /// Provides a singleton instance of TaskCleanupService
@@ -291,5 +399,9 @@ final cleanupStatisticsProvider = FutureProvider<Map<String, dynamic>>((ref) asy
 final performCleanupProvider = FutureProvider<bool>((ref) async {
   final cleanupService = ref.watch(taskCleanupServiceProvider);
   final dbService = await ref.watch(asyncDatabaseServiceProvider.future);
-  return await cleanupService.performCleanupIfNeeded(dbService);
+  final isAutoDeleteEnabled = await ref.watch(autoDeleteEnabledProvider.future);
+  return await cleanupService.performCleanupIfNeeded(
+    dbService, 
+    isAutoDeleteEnabled: isAutoDeleteEnabled,
+  );
 });

@@ -161,15 +161,20 @@ class AchievementWidget extends StatelessWidget {
               width: 1,
             ),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(
-              value: progressPercentage,
-              backgroundColor: Colors.transparent,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                AppTheme.purplePrimary.withValues(alpha: 0.8),
+          child: Stack(
+            children: [
+              // Progress fill with minimum width for visibility
+              FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: progressPercentage > 0 ? progressPercentage.clamp(0.02, 1.0) : 0.0,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.purplePrimary.withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ],

@@ -7,6 +7,7 @@ class PreferencesService {
   static const String _firstLaunchKey = AppConstants.firstLaunchKey;
   static const String _lastResetDateKey = AppConstants.lastResetDateKey;
   static const String _notificationsEnabledKey = AppConstants.notificationsEnabledKey;
+  static const String _autoDeleteEnabledKey = 'auto_delete_enabled';
   
   static PreferencesService? _instance;
   static SharedPreferences? _preferences;
@@ -106,6 +107,7 @@ class PreferencesService {
       await _preferences!.remove(_firstLaunchKey);
       await _preferences!.remove(_lastResetDateKey);
       await _preferences!.remove(_notificationsEnabledKey);
+      await _preferences!.remove(_autoDeleteEnabledKey);
       return true;
     } catch (e) {
       ErrorHandler.logError(e, context: 'Clear user data', type: ErrorType.preferences);
@@ -184,6 +186,31 @@ class PreferencesService {
       ErrorHandler.logError(e, context: 'Set notifications enabled', type: ErrorType.preferences);
       throw AppException(
         message: ErrorHandler.handlePreferencesError(e, context: 'Set notifications enabled'),
+        type: ErrorType.preferences,
+        originalError: e,
+      );
+    }
+  }
+
+  /// Get auto-delete enabled status
+  Future<bool> isAutoDeleteEnabled() async {
+    try {
+      return _preferences!.getBool(_autoDeleteEnabledKey) ?? true; // Default to enabled
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Get auto-delete enabled', type: ErrorType.preferences);
+      // Return true as default to maintain current behavior
+      return true;
+    }
+  }
+
+  /// Set auto-delete enabled status
+  Future<bool> setAutoDeleteEnabled(bool enabled) async {
+    try {
+      return await _preferences!.setBool(_autoDeleteEnabledKey, enabled);
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Set auto-delete enabled', type: ErrorType.preferences);
+      throw AppException(
+        message: ErrorHandler.handlePreferencesError(e, context: 'Set auto-delete enabled'),
         type: ErrorType.preferences,
         originalError: e,
       );
