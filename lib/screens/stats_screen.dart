@@ -5,6 +5,8 @@ import '../utils/responsive.dart';
 import '../providers/providers.dart';
 import '../models/task.dart';
 import '../widgets/heatmap_widget.dart';
+import '../widgets/simple_month_selector.dart';
+import '../services/data_cleanup_service.dart';
 
 /// Stats Screen Widget - Redesigned with focused data display
 ///
@@ -18,36 +20,12 @@ class StatsScreen extends ConsumerStatefulWidget {
 }
 
 class _StatsScreenState extends ConsumerState<StatsScreen> {
+  int _selectedMonth = DateTime.now().month;
   // Month selector state (for future use)
   // int _selectedMonth = DateTime.now().month;
   // final int _selectedYear = DateTime.now().year;
 
-  /// Generate sample tasks for demonstration when database is empty
-  List<Task> _generateSampleTasks() {
-    final now = DateTime.now();
-    final sampleTasks = <Task>[];
 
-    // Generate some sample tasks over the past month
-    for (int i = 0; i < 30; i++) {
-      final date = now.subtract(Duration(days: i));
-
-      // Create 1-3 tasks per day with varying completion status
-      final tasksPerDay = (i % 3) + 1;
-      for (int j = 0; j < tasksPerDay; j++) {
-        final isCompleted = (i + j) % 3 != 0; // ~66% completion rate
-        sampleTasks.add(Task(
-          id: i * 10 + j,
-          title: 'Sample Task ${i * 10 + j + 1}',
-          isCompleted: isCompleted,
-          isRoutine: j == 0, // First task of each day is routine
-          createdAt: date,
-          completedAt: isCompleted ? date.add(Duration(hours: j + 1)) : null,
-        ));
-      }
-    }
-
-    return sampleTasks;
-  }
 
   /// Calculate focused statistics
   Map<String, dynamic> _calculateFocusedStats(List<Task> allTasks) {
@@ -513,7 +491,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           ),
           const SizedBox(height: AppTheme.spacingL),
 
-          // Heatmap widget
+          // Improved Heatmap widget with better UI
           Consumer(
             builder: (context, ref, child) {
               final heatmapDataAsync = ref.watch(completionHeatmapDataProvider);
@@ -523,56 +501,116 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   return Container(
                     padding: const EdgeInsets.all(AppTheme.spacingM),
                     decoration: BoxDecoration(
-                      color: AppTheme.backgroundDark.withValues(alpha: 0.3),
-                      borderRadius:
-                          BorderRadius.circular(AppTheme.containerBorderRadius),
+                      color: AppTheme.surfaceGrey,
+                      borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
+                      border: Border.all(
+                        color: AppTheme.greyPrimary.withValues(alpha: 0.2),
+                        width: 1,
+                      ),
                     ),
-                    child: HeatmapWidget(
-                      data: heatmapData,
-                      baseColor: AppTheme.greyPrimary,
-                      title: 'Task Completion Activity',
-                      cellSize: 11.0,
-                      spacing: 2.5,
-                      onCellTap: (date, value) {
-                        // Show task details for the selected date
-                        _showDateTaskDetails(
-                            context, date, value as int?, allTasks);
-                      },
-                      tooltipBuilder: (date, value) {
-                        final count = value as int? ?? 0;
-                        return Container(
-                          padding: const EdgeInsets.all(AppTheme.spacingS),
-                          decoration: BoxDecoration(
-                            color: AppTheme.backgroundDark,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color:
-                                  AppTheme.greyPrimary.withValues(alpha: 0.3),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_view_month,
+                              color: AppTheme.greyPrimary,
+                              size: 20,
                             ),
-                          ),
-                          child: Text(
-                            '${date.day}/${date.month}/${date.year}\n$count tasks completed',
-                            style: AppTheme.caption.copyWith(
-                              color: AppTheme.primaryText,
+                            const SizedBox(width: AppTheme.spacingS),
+                            Text(
+                              'Task Completion Activity',
+                              style: AppTheme.bodyLarge.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.primaryText,
+                              ),
                             ),
-                            textAlign: TextAlign.center,
-                          ),
-                        );
-                      },
+                          ],
+                        ),
+                        const SizedBox(height: AppTheme.spacingM),
+                        
+                        // Improved Heatmap
+                        HeatmapWidget(
+                          data: heatmapData,
+                          baseColor: AppTheme.greyPrimary,
+                          title: '',
+                          cellSize: 12.0,
+                          spacing: 3.0,
+                          onCellTap: (date, value) {
+                            _showDateTaskDetails(context, date, value as int?, allTasks);
+                          },
+                          tooltipBuilder: (date, value) {
+                            final count = value as int? ?? 0;
+                            return Container(
+                              padding: const EdgeInsets.all(AppTheme.spacingS),
+                              decoration: BoxDecoration(
+                                color: AppTheme.backgroundDark,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: AppTheme.greyPrimary.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Text(
+                                '${date.day}/${date.month}/${date.year}\n$count tasks completed',
+                                style: AppTheme.caption.copyWith(
+                                  color: AppTheme.primaryText,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            );
+                          },
+                        ),
+                        
+                        const SizedBox(height: AppTheme.spacingS),
+                        
+                        // Legend
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Less',
+                              style: AppTheme.caption.copyWith(
+                                color: AppTheme.secondaryText,
+                              ),
+                            ),
+                            const SizedBox(width: AppTheme.spacingS),
+                            ...List.generate(5, (index) {
+                              return Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 1),
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.greyPrimary.withValues(
+                                    alpha: (index + 1) * 0.2,
+                                  ),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              );
+                            }),
+                            const SizedBox(width: AppTheme.spacingS),
+                            Text(
+                              'More',
+                              style: AppTheme.caption.copyWith(
+                                color: AppTheme.secondaryText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   );
                 },
                 loading: () => Container(
                   height: 200,
                   decoration: BoxDecoration(
-                    color: AppTheme.backgroundDark.withValues(alpha: 0.3),
-                    borderRadius:
-                        BorderRadius.circular(AppTheme.containerBorderRadius),
+                    color: AppTheme.surfaceGrey,
+                    borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
                   ),
                   child: const Center(
                     child: CircularProgressIndicator(
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(AppTheme.greyPrimary),
+                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.greyPrimary),
                     ),
                   ),
                 ),
@@ -580,9 +618,8 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   height: 120,
                   padding: const EdgeInsets.all(AppTheme.spacingM),
                   decoration: BoxDecoration(
-                    color: AppTheme.backgroundDark.withValues(alpha: 0.3),
-                    borderRadius:
-                        BorderRadius.circular(AppTheme.containerBorderRadius),
+                    color: AppTheme.surfaceGrey,
+                    borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
                   ),
                   child: Center(
                     child: Column(
@@ -595,7 +632,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                         ),
                         const SizedBox(height: AppTheme.spacingS),
                         Text(
-                          'Failed to load heatmap',
+                          'Failed to load activity data',
                           style: AppTheme.bodyMedium.copyWith(
                             color: AppTheme.secondaryText,
                           ),
@@ -619,11 +656,77 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
               );
             },
           ),
+          
+          const SizedBox(height: AppTheme.spacingL),
+          
+          // Month selector for current year
+          SimpleMonthSelector(
+            selectedMonth: _selectedMonth,
+            onMonthChanged: (month) {
+              setState(() {
+                _selectedMonth = month;
+              });
+            },
+            currentYear: DateTime.now().year,
+          ),
+          
+          const SizedBox(height: AppTheme.spacingL),
+          
+          // Data management section
+          Container(
+            padding: const EdgeInsets.all(AppTheme.spacingM),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceGrey,
+              borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.storage,
+                      color: AppTheme.greyPrimary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: AppTheme.spacingS),
+                    Text(
+                      'Data Management',
+                      style: AppTheme.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryText,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppTheme.spacingM),
+                Text(
+                  'Keep only current year data for better performance',
+                  style: AppTheme.bodyMedium.copyWith(
+                    color: AppTheme.secondaryText,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacingM),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _cleanupOldData,
+                    icon: const Icon(Icons.cleaning_services, size: 18),
+                    label: const Text('Clean Old Data'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.greyPrimary,
+                      foregroundColor: AppTheme.primaryText,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
-
   /// Show task details for a specific date
   void _showDateTaskDetails(BuildContext context, DateTime date,
       int? completedCount, List<Task> allTasks) {
@@ -665,7 +768,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                     return ListTile(
                       leading: Icon(
                         Icons.check_circle,
-                        color: Colors.green,
+                        color: AppTheme.greyPrimary,
                         size: 20,
                       ),
                       title: Text(
@@ -699,6 +802,80 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _cleanupOldData() async {
+    try {
+      final databaseService = ref.read(databaseServiceProvider);
+      final cleanupService = DataCleanupService(databaseService);
+      
+      // Show confirmation dialog
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: AppTheme.surfaceGrey,
+          title: Text(
+            'Clean Old Data',
+            style: AppTheme.headingMedium.copyWith(color: AppTheme.primaryText),
+          ),
+          content: Text(
+            'This will delete all tasks from previous years, keeping only ${DateTime.now().year} data. This action cannot be undone.',
+            style: AppTheme.bodyMedium.copyWith(color: AppTheme.secondaryText),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                'Cancel',
+                style: AppTheme.bodyMedium.copyWith(color: AppTheme.secondaryText),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.greyPrimary,
+                foregroundColor: AppTheme.primaryText,
+              ),
+              child: const Text('Clean Data'),
+            ),
+          ],
+        ),
+      );
+      
+      if (confirmed == true) {
+        await cleanupService.cleanupOldData();
+        
+        // Refresh providers
+        ref.invalidate(allTasksProvider);
+        ref.invalidate(completionHeatmapDataProvider);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Old data cleaned successfully',
+                style: AppTheme.bodyMedium.copyWith(color: AppTheme.primaryText),
+              ),
+              backgroundColor: AppTheme.greyPrimary,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to clean data: ${e.toString()}',
+              style: AppTheme.bodyMedium.copyWith(color: AppTheme.secondaryText),
+            ),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -753,40 +930,66 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                       ...taskState.routineTasks
                     ];
 
-                    // If no tasks exist, show sample data for demonstration
-                    final effectiveTasks =
-                        tasks.isEmpty ? _generateSampleTasks() : tasks;
+                    // Use actual tasks, don't generate sample data
+                    final effectiveTasks = tasks;
                     final stats = _calculateFocusedStats(effectiveTasks);
 
                     return Column(
                       children: [
-                        // Sample data notice
+                        // Empty state notice
                         if (tasks.isEmpty)
                           Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: AppTheme.spacingS,
                             ),
                             child: Container(
-                              padding: const EdgeInsets.all(AppTheme.spacingM),
+                              padding: const EdgeInsets.all(AppTheme.spacingXL),
                               decoration: BoxDecoration(
-                                color: AppTheme.greyPrimary
-                                    .withValues(alpha: 0.15),
+                                color: AppTheme.surfaceGrey,
                                 borderRadius: BorderRadius.circular(
-                                    AppTheme.buttonBorderRadius),
+                                    AppTheme.containerBorderRadius + 2),
+                                border: Border.all(
+                                  color: AppTheme.greyPrimary.withValues(alpha: 0.2),
+                                  width: 1,
+                                ),
                               ),
-                              child: Row(
+                              child: Column(
                                 children: [
                                   Icon(
-                                    Icons.info_outline,
+                                    Icons.analytics_outlined,
                                     color: AppTheme.greyPrimary,
-                                    size: 20,
+                                    size: 48,
                                   ),
-                                  const SizedBox(width: AppTheme.spacingS),
-                                  Expanded(
-                                    child: Text(
-                                      'No tasks found. Showing sample data for demonstration.',
-                                      style: AppTheme.bodyMedium.copyWith(
-                                        color: AppTheme.greyPrimary,
+                                  const SizedBox(height: AppTheme.spacingM),
+                                  Text(
+                                    'No Statistics Yet',
+                                    style: AppTheme.headingMedium.copyWith(
+                                      color: AppTheme.primaryText,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppTheme.spacingS),
+                                  Text(
+                                    'Start adding and completing tasks to see your productivity insights here.',
+                                    style: AppTheme.bodyMedium.copyWith(
+                                      color: AppTheme.secondaryText,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: AppTheme.spacingL),
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                      // Navigate to home screen to add tasks
+                                      Navigator.of(context).pop();
+                                    },
+                                    icon: const Icon(Icons.add_task),
+                                    label: const Text('Add Your First Task'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.greyPrimary,
+                                      foregroundColor: AppTheme.primaryText,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: AppTheme.spacingL,
+                                        vertical: AppTheme.spacingM,
                                       ),
                                     ),
                                   ),
@@ -796,9 +999,11 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                           ),
 
                         if (tasks.isEmpty)
-                          const SizedBox(height: AppTheme.spacingL),
+                          const SizedBox(height: AppTheme.spacingXL),
 
-                        // Quick Stats Summary
+                        // Show stats only when there are tasks
+                        if (tasks.isNotEmpty) ...[
+                          // Quick Stats Summary
                         Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppTheme.spacingS,
@@ -890,6 +1095,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                         ),
 
                         const SizedBox(height: AppTheme.spacingXL),
+                        ],
                       ],
                     );
                   },

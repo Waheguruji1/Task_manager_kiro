@@ -569,6 +569,13 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  /// Deletes all tasks from the database
+  /// 
+  /// Returns the number of deleted tasks
+  Future<int> deleteAllTasks() async {
+    return await (delete(tasks)).go();
+  }
+
   /// Marks multiple tasks as completed in a single transaction
   /// 
   /// [taskIds] List of task IDs to mark as completed

@@ -38,16 +38,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           await ref.read(asyncPreferencesServiceProvider.future);
       final dbService = await ref.read(asyncDatabaseServiceProvider.future);
 
-      // Clear all tasks
-      final allTasks = await dbService.getAllTasks();
-      for (final task in allTasks) {
-        if (task.id != null) {
-          await dbService.deleteTask(task.id!);
-        }
-      }
+      // Clear all tasks efficiently
+      await dbService.deleteAllTasks();
 
       // Clear user preferences
       await prefsService.clearUserData();
+
+      // Invalidate all providers to clear cached data
+      ref.invalidate(asyncTaskStateNotifierProvider);
+      ref.invalidate(allTasksProvider);
+      ref.invalidate(asyncUserStateNotifierProvider);
+      ref.invalidate(asyncPreferencesServiceProvider);
+      ref.invalidate(asyncDatabaseServiceProvider);
+      ref.invalidate(completionHeatmapDataProvider);
+      ref.invalidate(taskChangeNotifierProvider);
 
       if (mounted) {
         ErrorHandler.showSuccessSnackBar(
@@ -266,7 +270,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _handleSendScheduledTestNotification() async {
     try {
       final notificationService = ref.read(notificationServiceProvider);
-      final notificationId = await notificationService.sendScheduledTestNotification(delayMinutes: 1);
+      final notificationId = await notificationService
+          .sendScheduledTestNotification(delayMinutes: 1);
 
       if (mounted) {
         if (notificationId != null) {
@@ -300,8 +305,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     });
 
     try {
-      final prefsService = await ref.read(asyncPreferencesServiceProvider.future);
-      
+      final prefsService =
+          await ref.read(asyncPreferencesServiceProvider.future);
+
       // Update the setting
       await prefsService.setAutoDeleteEnabled(enabled);
 
@@ -309,15 +315,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (enabled) {
         final cleanupService = ref.read(taskCleanupServiceProvider);
         final dbService = await ref.read(asyncDatabaseServiceProvider.future);
-        
+
         // Perform immediate cleanup of tasks older than 3 months
-        final cleanupSuccess = await cleanupService.performImmediateCleanup(dbService);
-        
+        final cleanupSuccess =
+            await cleanupService.performImmediateCleanup(dbService);
+
         if (cleanupSuccess) {
           // Refresh task providers to reflect cleanup
           ref.invalidate(allTasksProvider);
           ref.invalidate(taskChangeNotifierProvider);
-          
+
           if (mounted) {
             ErrorHandler.showSuccessSnackBar(
               context,
@@ -343,7 +350,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       // Refresh the provider
       ref.invalidate(autoDeleteEnabledProvider);
-
     } catch (e) {
       if (mounted) {
         ErrorHandler.showErrorSnackBar(
@@ -371,8 +377,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     try {
       final notificationService = ref.read(notificationServiceProvider);
       final serviceStatus = await notificationService.getServiceStatus();
-      final platformCompatibility = await notificationService.detectPlatformCompatibility();
-      final pendingNotifications = await notificationService.getDetailedPendingNotifications();
+      final platformCompatibility =
+          await notificationService.detectPlatformCompatibility();
+      final pendingNotifications =
+          await notificationService.getDetailedPendingNotifications();
 
       if (mounted) {
         showDialog(
@@ -380,7 +388,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           builder: (context) => AlertDialog(
             backgroundColor: AppTheme.surfaceGrey,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
+              borderRadius:
+                  BorderRadius.circular(AppTheme.containerBorderRadius),
             ),
             title: Row(
               children: [
@@ -402,14 +411,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Service Health
-                  _buildStatusItem('Service Health', serviceStatus.isHealthy ? 'Healthy' : 'Unhealthy'),
-                  _buildStatusItem('Initialized', serviceStatus.isInitialized ? 'Yes' : 'No'),
-                  _buildStatusItem('Channels Created', serviceStatus.channelsCreated ? 'Yes' : 'No'),
-                  _buildStatusItem('Timezone Ready', serviceStatus.timezoneInitialized ? 'Yes' : 'No'),
-                  _buildStatusItem('Permissions Granted', serviceStatus.permissionsGranted ? 'Yes' : 'No'),
-                  
+                  _buildStatusItem('Service Health',
+                      serviceStatus.isHealthy ? 'Healthy' : 'Unhealthy'),
+                  _buildStatusItem('Initialized',
+                      serviceStatus.isInitialized ? 'Yes' : 'No'),
+                  _buildStatusItem('Channels Created',
+                      serviceStatus.channelsCreated ? 'Yes' : 'No'),
+                  _buildStatusItem('Timezone Ready',
+                      serviceStatus.timezoneInitialized ? 'Yes' : 'No'),
+                  _buildStatusItem('Permissions Granted',
+                      serviceStatus.permissionsGranted ? 'Yes' : 'No'),
+
                   const SizedBox(height: AppTheme.spacingM),
-                  
+
                   // Platform Info
                   Text(
                     'Platform Information',
@@ -419,12 +433,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                   const SizedBox(height: AppTheme.spacingS),
-                  _buildStatusItem('Platform', '${platformCompatibility.platform} ${platformCompatibility.version}'),
-                  _buildStatusItem('Supports Channels', platformCompatibility.supportsNotificationChannels ? 'Yes' : 'No'),
-                  _buildStatusItem('Supports Exact Alarms', platformCompatibility.supportsExactAlarms ? 'Yes' : 'No'),
-                  
+                  _buildStatusItem('Platform',
+                      '${platformCompatibility.platform} ${platformCompatibility.version}'),
+                  _buildStatusItem(
+                      'Supports Channels',
+                      platformCompatibility.supportsNotificationChannels
+                          ? 'Yes'
+                          : 'No'),
+                  _buildStatusItem('Supports Exact Alarms',
+                      platformCompatibility.supportsExactAlarms ? 'Yes' : 'No'),
+
                   const SizedBox(height: AppTheme.spacingM),
-                  
+
                   // Pending Notifications
                   Text(
                     'Pending Notifications',
@@ -435,7 +455,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   const SizedBox(height: AppTheme.spacingS),
                   _buildStatusItem('Count', '${pendingNotifications.length}'),
-                  
+
                   // Errors and Warnings
                   if (serviceStatus.errors.isNotEmpty) ...[
                     const SizedBox(height: AppTheme.spacingM),
@@ -448,14 +468,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     const SizedBox(height: AppTheme.spacingS),
                     ...serviceStatus.errors.map((error) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        '• $error',
-                        style: AppTheme.caption.copyWith(color: Colors.red),
-                      ),
-                    )),
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            '• $error',
+                            style: AppTheme.caption.copyWith(color: Colors.red),
+                          ),
+                        )),
                   ],
-                  
+
                   if (serviceStatus.warnings.isNotEmpty) ...[
                     const SizedBox(height: AppTheme.spacingM),
                     Text(
@@ -467,14 +487,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     const SizedBox(height: AppTheme.spacingS),
                     ...serviceStatus.warnings.map((warning) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        '• $warning',
-                        style: AppTheme.caption.copyWith(color: Colors.orange),
-                      ),
-                    )),
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            '• $warning',
+                            style:
+                                AppTheme.caption.copyWith(color: Colors.orange),
+                          ),
+                        )),
                   ],
-                  
+
                   // Platform Limitations
                   if (platformCompatibility.limitations.isNotEmpty) ...[
                     const SizedBox(height: AppTheme.spacingM),
@@ -486,13 +507,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ),
                     const SizedBox(height: AppTheme.spacingS),
-                    ...platformCompatibility.limitations.map((limitation) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        '• $limitation',
-                        style: AppTheme.caption.copyWith(color: AppTheme.secondaryText),
-                      ),
-                    )),
+                    ...platformCompatibility.limitations
+                        .map((limitation) => Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Text(
+                                '• $limitation',
+                                style: AppTheme.caption
+                                    .copyWith(color: AppTheme.secondaryText),
+                              ),
+                            )),
                   ],
                 ],
               ),
@@ -632,14 +655,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         const SizedBox(height: AppTheme.spacingS),
         ...solutions.map((solution) => Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Text(
-            '• $solution',
-            style: AppTheme.bodyMedium.copyWith(
-              color: AppTheme.secondaryText,
-            ),
-          ),
-        )),
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                '• $solution',
+                style: AppTheme.bodyMedium.copyWith(
+                  color: AppTheme.secondaryText,
+                ),
+              ),
+            )),
       ],
     );
   }
@@ -1065,7 +1088,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       icon: Icons.notification_add,
                       title: 'Send Test Notification',
                       subtitle: 'Test if notifications are working correctly',
-                      onTap: _isSendingTestNotification ? () {} : _handleSendTestNotification,
+                      onTap: _isSendingTestNotification
+                          ? () {}
+                          : _handleSendTestNotification,
                     ),
 
                     // Divider
@@ -1096,8 +1121,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     _buildSettingsItem(
                       icon: Icons.info_outline,
                       title: 'Service Status',
-                      subtitle: 'View detailed notification service information',
-                      onTap: _isCheckingServiceStatus ? () {} : _showServiceStatusDialog,
+                      subtitle:
+                          'View detailed notification service information',
+                      onTap: _isCheckingServiceStatus
+                          ? () {}
+                          : _showServiceStatusDialog,
                     ),
 
                     // Divider
@@ -1126,13 +1154,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     // Auto-delete toggle
                     Consumer(
                       builder: (context, ref, child) {
-                        final autoDeleteAsync = ref.watch(autoDeleteEnabledProvider);
-                        
+                        final autoDeleteAsync =
+                            ref.watch(autoDeleteEnabledProvider);
+
                         return autoDeleteAsync.when(
                           data: (isEnabled) => _buildNotificationToggleItem(
                             icon: Icons.auto_delete,
                             title: 'Auto-Delete Old Tasks',
-                            subtitle: 'Automatically delete completed tasks older than 2 months',
+                            subtitle:
+                                'Automatically delete completed tasks older than 2 months',
                             value: isEnabled,
                             onChanged: _handleAutoDeleteToggle,
                             isLoading: _isUpdatingAutoDelete,
@@ -1140,7 +1170,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           loading: () => _buildNotificationToggleItem(
                             icon: Icons.auto_delete,
                             title: 'Auto-Delete Old Tasks',
-                            subtitle: 'Automatically delete completed tasks older than 2 months',
+                            subtitle:
+                                'Automatically delete completed tasks older than 2 months',
                             value: true,
                             onChanged: (_) {},
                             isLoading: true,
@@ -1148,7 +1179,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           error: (_, __) => _buildNotificationToggleItem(
                             icon: Icons.auto_delete,
                             title: 'Auto-Delete Old Tasks',
-                            subtitle: 'Automatically delete completed tasks older than 2 months',
+                            subtitle:
+                                'Automatically delete completed tasks older than 2 months',
                             value: true,
                             onChanged: _handleAutoDeleteToggle,
                             isLoading: false,
@@ -1156,14 +1188,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         );
                       },
                     ),
-                    
+
                     // Divider
                     Container(
                       height: 1,
-                      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingM),
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.spacingM),
                       color: AppTheme.borderWhite.withValues(alpha: 0.1),
                     ),
-                    
+
                     _buildSettingsItem(
                       icon: Icons.delete_forever,
                       title: 'Clear All Data',

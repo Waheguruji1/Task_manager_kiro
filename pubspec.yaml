@@ -75,6 +75,11 @@ dependencies:
                                          # Cross-platform notification management
   timezone: ^0.9.4                      # Timezone support for scheduled notifications
                                          # Required for proper notification scheduling
+  
+  # Development Tools (used in main app)
+  device_preview: ^1.1.0           # Device preview for testing different screen sizes
+                                    # Enables testing app on various device configurations
+                                    # Only used in debug mode for development
 
 dev_dependencies:
   flutter_test:
@@ -97,10 +102,6 @@ dev_dependencies:
   build_runner: ^2.4.7             # Build system for Dart code generation
                                     # Executes code generators like drift_dev during development
                                     # Run with: `dart run build_runner build` or `dart run build_runner watch`
-  
-  device_preview: ^1.1.0           # Device preview for testing different screen sizes
-                                    # Enables testing app on various device configurations
-                                    # Only used in debug mode for development
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

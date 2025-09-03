@@ -39,9 +39,9 @@ class AchievementWidget extends StatelessWidget {
                   _buildTitleRow(),
                   const SizedBox(height: AppTheme.spacingXS),
                   _buildDescription(),
-                  if (!isEarned) ...[
-                    const SizedBox(height: AppTheme.spacingS),
-                    _buildProgressIndicator(),
+                  if (!isEarned && progress > 0) ...[
+                    const SizedBox(height: AppTheme.spacingXS),
+                    _buildSimpleProgress(),
                   ],
                   if (isEarned && achievement.earnedAt != null) ...[
                     const SizedBox(height: AppTheme.spacingXS),
@@ -124,60 +124,16 @@ class AchievementWidget extends StatelessWidget {
     );
   }
 
-  /// Progress indicator for unearned achievements
-  Widget _buildProgressIndicator() {
-    final progressPercentage = achievement.progressPercentage;
+  /// Simple progress text for unearned achievements
+  Widget _buildSimpleProgress() {
     final progressText = _getProgressText();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Progress',
-              style: AppTheme.caption.copyWith(
-                color: AppTheme.disabledText,
-              ),
-            ),
-            Text(
-              progressText,
-              style: AppTheme.caption.copyWith(
-                color: AppTheme.secondaryText,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppTheme.spacingXS),
-        Container(
-          height: 6,
-          decoration: BoxDecoration(
-            color: AppTheme.greyDark,
-            borderRadius: BorderRadius.circular(3),
-            border: Border.all(
-              color: AppTheme.borderWhite.withValues(alpha: 0.3),
-              width: 1,
-            ),
-          ),
-          child: Stack(
-            children: [
-              // Progress fill with minimum width for visibility
-              FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: progressPercentage > 0 ? progressPercentage.clamp(0.02, 1.0) : 0.0,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppTheme.purplePrimary.withValues(alpha: 0.8),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+    return Text(
+      progressText,
+      style: AppTheme.caption.copyWith(
+        color: AppTheme.secondaryText,
+        fontWeight: FontWeight.w500,
+      ),
     );
   }
 

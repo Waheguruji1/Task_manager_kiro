@@ -592,6 +592,60 @@ class NotificationService {
     return false;
   }
 
+  /// Check if exact alarm scheduling is available
+  /// 
+  /// Returns true if the app can schedule exact alarms
+  Future<bool> canScheduleExactAlarms() async {
+    if (!Platform.isAndroid) {
+      return true; // iOS doesn't have this restriction
+    }
+    
+    try {
+      final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+          _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      
+      if (androidImplementation == null) {
+        return false;
+      }
+      
+      final bool? canSchedule = await androidImplementation.canScheduleExactNotifications();
+      return canSchedule ?? false;
+    } catch (e) {
+      debugPrint('Error checking exact alarm permission: $e');
+      return false;
+    }
+  }
+
+  /// Request exact alarm permission (Android 12+)
+  /// 
+  /// This will open the system settings for the user to grant permission
+  Future<bool> requestExactAlarmPermission() async {
+    if (!Platform.isAndroid) {
+      return true; // iOS doesn't need this
+    }
+    
+    try {
+      final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+          _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      
+      if (androidImplementation == null) {
+        return false;
+      }
+      
+      // This will open the system settings page for exact alarms
+      await androidImplementation.requestExactAlarmsPermission();
+      
+      // Check if permission was granted after user returns from settings
+      await Future.delayed(const Duration(milliseconds: 500));
+      return await canScheduleExactAlarms();
+    } catch (e) {
+      debugPrint('Error requesting exact alarm permission: $e');
+      return false;
+    }
+  }
+
   /// Get detailed notification permission status
   /// 
   /// Returns specific permission status for better handling
@@ -642,6 +696,26 @@ class NotificationService {
     }
 
     return NotificationPermissionStatus.unknown;
+  }
+
+  /// Get comprehensive permission status including exact alarms
+  /// 
+  /// Returns a map with detailed permission information
+  Future<Map<String, dynamic>> getComprehensivePermissionStatus() async {
+    final basicPermissions = await areNotificationsEnabled();
+    final exactAlarms = await canScheduleExactAlarms();
+    final detailedStatus = await getDetailedPermissionStatus();
+    
+    return {
+      'basicNotifications': basicPermissions,
+      'exactAlarms': exactAlarms,
+      'detailedStatus': detailedStatus.toString(),
+      'platform': Platform.operatingSystem,
+      'canSchedulePreciseNotifications': exactAlarms,
+      'recommendedAction': exactAlarms 
+          ? 'All permissions available' 
+          : 'Consider enabling exact alarms for precise timing',
+    };
   }
 
   /// Schedule a notification for a task with enhanced error handling and verification
@@ -785,29 +859,34 @@ class NotificationService {
   }
 
   /// Helper method to schedule notification with a valid TZDateTime
-  /// Enhanced with proper exactAllowWhileIdle handling and permission checks
+  /// Enhanced with proper exact alarm permission handling
   Future<int?> _scheduleNotificationWithDate(int notificationId, Task task, tz.TZDateTime scheduledDate) async {
     try {
-      // Determine the appropriate Android schedule mode based on platform version and permissions
-      AndroidScheduleMode scheduleMode = AndroidScheduleMode.exactAllowWhileIdle;
+      // Determine the appropriate Android schedule mode based on available permissions
+      AndroidScheduleMode scheduleMode = AndroidScheduleMode.inexact; // Default to safe mode
       
       if (Platform.isAndroid) {
         try {
-          // Check if we can use exact alarms (Android 12+)
           final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
               _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
                   AndroidFlutterLocalNotificationsPlugin>();
           
           if (androidImplementation != null) {
-            // Try to check if exact alarms are allowed
-            // Note: This is a best-effort approach as the plugin may not expose this directly
-            scheduleMode = AndroidScheduleMode.exactAllowWhileIdle;
-            debugPrint('Using exactAllowWhileIdle schedule mode for notification $notificationId');
+            // Check if exact alarms are allowed
+            final bool? canScheduleExactAlarms = await androidImplementation.canScheduleExactNotifications();
+            
+            if (canScheduleExactAlarms == true) {
+              scheduleMode = AndroidScheduleMode.exactAllowWhileIdle;
+              debugPrint('Using exactAllowWhileIdle schedule mode for notification $notificationId');
+            } else {
+              scheduleMode = AndroidScheduleMode.inexact;
+              debugPrint('Exact alarms not permitted, using inexact scheduling for notification $notificationId');
+            }
           }
         } catch (e) {
-          // Fallback to exact mode if exactAllowWhileIdle fails
-          debugPrint('exactAllowWhileIdle not available, falling back to exact mode: $e');
-          scheduleMode = AndroidScheduleMode.exact;
+          // Fallback to inexact mode if permission check fails
+          debugPrint('Permission check failed, falling back to inexact mode: $e');
+          scheduleMode = AndroidScheduleMode.inexact;
         }
       }
 
@@ -825,43 +904,33 @@ class NotificationService {
 
       debugPrint('Notification $notificationId scheduled successfully with mode: $scheduleMode');
       return notificationId;
-    } catch (e, stackTrace) {
-      // Handle specific Android exact alarm permission errors
-      if (e.toString().contains('exact alarm') || e.toString().contains('SCHEDULE_EXACT_ALARM')) {
-        debugPrint('Exact alarm permission denied, trying with approximate scheduling');
-        
-        try {
-          // Retry with approximate scheduling as fallback
-          await _flutterLocalNotificationsPlugin.zonedSchedule(
-            notificationId,
-            'Task Reminder',
-            _formatNotificationBody(task),
-            scheduledDate,
-            _getNotificationDetails(),
-            androidScheduleMode: AndroidScheduleMode.inexact,
-            uiLocalNotificationDateInterpretation:
-                UILocalNotificationDateInterpretation.absoluteTime,
-            payload: task.id?.toString(),
-          );
-          
-          debugPrint('Notification $notificationId scheduled with approximate timing due to permission restrictions');
-          return notificationId;
-        } catch (fallbackError, fallbackStackTrace) {
-          _logError('notification_scheduling_fallback', fallbackError, fallbackStackTrace, context: {
-            'notificationId': notificationId,
-            'taskTitle': task.title,
-            'originalError': e.toString(),
-          });
-          return null;
-        }
-      }
+    } catch (e) {
+      // If scheduling fails, try with the most basic inexact mode
+      debugPrint('Initial scheduling failed, trying with basic inexact mode: $e');
       
-      _logError('notification_scheduling_internal', e, stackTrace, context: {
-        'notificationId': notificationId,
-        'taskTitle': task.title,
-        'scheduledDate': scheduledDate.toIso8601String(),
-      });
-      return null;
+      try {
+        await _flutterLocalNotificationsPlugin.zonedSchedule(
+          notificationId,
+          'Task Reminder',
+          _formatNotificationBody(task),
+          scheduledDate,
+          _getNotificationDetails(),
+          androidScheduleMode: AndroidScheduleMode.inexact,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          payload: task.id?.toString(),
+        );
+        
+        debugPrint('Notification $notificationId scheduled with basic inexact timing as fallback');
+        return notificationId;
+      } catch (fallbackError, fallbackStackTrace) {
+        _logError('notification_scheduling_fallback', fallbackError, fallbackStackTrace, context: {
+          'notificationId': notificationId,
+          'taskTitle': task.title,
+          'originalError': e.toString(),
+        });
+        return null;
+      }
     }
   }
 
@@ -1269,31 +1338,7 @@ class NotificationService {
     }
   }
 
-  /// Check if exact alarm permissions are available (Android 12+)
-  /// 
-  /// Returns true if exact alarms can be scheduled, false otherwise
-  /// On non-Android platforms, always returns true
-  Future<bool> canScheduleExactAlarms() async {
-    if (!Platform.isAndroid) {
-      return true; // iOS and other platforms don't have this restriction
-    }
-    
-    try {
-      final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
-          _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
-      
-      if (androidImplementation == null) {
-        return false;
-      }
-      
-      // Simple check: if we can create channels, assume we can schedule
-      return _channelsCreated;
-    } catch (e) {
-      debugPrint('Error checking exact alarm permissions: $e');
-      return false;
-    }
-  }
+
 
   /// Request exact alarm permissions if needed (Android 12+)
   /// 
@@ -1495,13 +1540,39 @@ class NotificationService {
       
       debugPrint('Scheduling test notification with ID: $testId for ${scheduledTime.toIso8601String()}');
       
+      // Determine the appropriate Android schedule mode
+      AndroidScheduleMode scheduleMode = AndroidScheduleMode.inexact; // Default to safe mode
+      
+      if (Platform.isAndroid) {
+        try {
+          final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+              _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+                  AndroidFlutterLocalNotificationsPlugin>();
+          
+          if (androidImplementation != null) {
+            final bool? canScheduleExactAlarms = await androidImplementation.canScheduleExactNotifications();
+            
+            if (canScheduleExactAlarms == true) {
+              scheduleMode = AndroidScheduleMode.exactAllowWhileIdle;
+              debugPrint('Using exact scheduling for test notification');
+            } else {
+              scheduleMode = AndroidScheduleMode.inexact;
+              debugPrint('Using approximate scheduling for test notification (exact alarms not permitted)');
+            }
+          }
+        } catch (e) {
+          debugPrint('Permission check failed for test notification, using inexact mode: $e');
+          scheduleMode = AndroidScheduleMode.inexact;
+        }
+      }
+      
       await _flutterLocalNotificationsPlugin.zonedSchedule(
         testId,
         'Scheduled Test Notification',
         'This test notification was scheduled $delayMinutes minute(s) ago! 🎉',
         tzScheduledTime,
         _getNotificationDetails(),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: scheduleMode,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: 'scheduled_test_notification',

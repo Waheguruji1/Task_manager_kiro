@@ -135,4 +135,19 @@ class AppTheme {
         color: greyPrimary.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(6),
       );
+
+  // Enhanced UI Properties (for test compatibility)
+  static BoxDecoration get enhancedButtonDecoration => BoxDecoration(
+        color: greyPrimary,
+        borderRadius: BorderRadius.circular(buttonBorderRadius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      );
+
+  static const double visualHierarchySpacing = 12.0;
 }

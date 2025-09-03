@@ -204,6 +204,40 @@ class DatabaseService {
       );
     }
   }
+
+  /// Delete all tasks from the database
+  Future<int> deleteAllTasks() async {
+    try {
+      final deletedCount = await _database!.deleteAllTasks();
+      
+      return deletedCount;
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Delete all tasks', type: ErrorType.database);
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Delete all tasks'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
+
+  /// Delete tasks before a specific date (for cleanup)
+  Future<int> deleteTasksBeforeDate(DateTime date) async {
+    try {
+      final deletedCount = await (_database!.delete(_database!.tasks)
+            ..where((t) => t.createdAt.isSmallerThanValue(date)))
+          .go();
+      
+      return deletedCount;
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Delete tasks before date', type: ErrorType.database);
+      throw AppException(
+        message: ErrorHandler.handleDatabaseError(e, context: 'Delete tasks before date'),
+        type: ErrorType.database,
+        originalError: e,
+      );
+    }
+  }
   
   /// Toggle task completion status
   Future<bool> toggleTaskCompletion(int id) async {

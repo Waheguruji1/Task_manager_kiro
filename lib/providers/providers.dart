@@ -208,7 +208,11 @@ final achievementServiceProvider = FutureProvider<AchievementService>((ref) asyn
 /// All Achievements Provider
 /// 
 /// Provides a list of all achievements from the database
+/// Automatically refreshes when task state changes to ensure real-time updates
 final allAchievementsProvider = FutureProvider<List<Achievement>>((ref) async {
+  // Watch task state to trigger refresh when tasks change
+  ref.watch(taskStateNotifierProvider);
+  
   final achievementService = await ref.watch(achievementServiceProvider.future);
   return await achievementService.getAllAchievements();
 });
@@ -216,7 +220,11 @@ final allAchievementsProvider = FutureProvider<List<Achievement>>((ref) async {
 /// Earned Achievements Provider
 /// 
 /// Provides a list of earned achievements
+/// Automatically refreshes when task state changes to ensure real-time updates
 final earnedAchievementsProvider = FutureProvider<List<Achievement>>((ref) async {
+  // Watch task state to trigger refresh when tasks change
+  ref.watch(taskStateNotifierProvider);
+  
   final achievementService = await ref.watch(achievementServiceProvider.future);
   return await achievementService.getEarnedAchievements();
 });
@@ -224,7 +232,11 @@ final earnedAchievementsProvider = FutureProvider<List<Achievement>>((ref) async
 /// Unearned Achievements Provider
 /// 
 /// Provides a list of unearned achievements with progress
+/// Automatically refreshes when task state changes to ensure real-time updates
 final unearnedAchievementsProvider = FutureProvider<List<Achievement>>((ref) async {
+  // Watch task state to trigger refresh when tasks change
+  ref.watch(taskStateNotifierProvider);
+  
   final achievementService = await ref.watch(achievementServiceProvider.future);
   return await achievementService.getUnearnedAchievements();
 });

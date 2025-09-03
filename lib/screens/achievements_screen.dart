@@ -83,96 +83,129 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
   Widget _buildProgressSection(List<Achievement> achievements) {
     final earnedCount = achievements.where((a) => a.isEarned).length;
     final totalCount = achievements.length;
+    final progressPercentage = totalCount > 0 ? (earnedCount / totalCount * 100).round() : 0;
 
-    // Calculate task-related progress (mock data for now)
-    final tasksCompleted = 6;
-    final totalTasks = 10;
-    final projectsFinished = 2;
-    final totalProjects = 5;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Progress',
-          style: AppTheme.headingLarge.copyWith(
-            fontWeight: FontWeight.bold,
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.spacingL),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceGrey,
+        borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
+        border: Border.all(
+          color: AppTheme.greyPrimary.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppTheme.spacingS),
+                decoration: BoxDecoration(
+                  color: AppTheme.greyPrimary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.emoji_events,
+                  color: AppTheme.greyPrimary,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: AppTheme.spacingM),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Achievement Progress',
+                      style: AppTheme.headingMedium.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryText,
+                      ),
+                    ),
+                    Text(
+                      'Keep completing tasks to unlock more achievements',
+                      style: AppTheme.caption.copyWith(
+                        color: AppTheme.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: AppTheme.spacingL),
-        
-        // Tasks Completed Progress
-        _buildProgressItem(
-          'Tasks Completed',
-          tasksCompleted,
-          totalTasks,
-        ),
-        
-        const SizedBox(height: AppTheme.spacingL),
-        
-        // Projects Finished Progress
-        _buildProgressItem(
-          'Projects Finished',
-          projectsFinished,
-          totalProjects,
-        ),
-        
-        const SizedBox(height: AppTheme.spacingL),
-        
-        // Achievements Progress
-        _buildProgressItem(
-          'Achievements Earned',
-          earnedCount,
-          totalCount,
-        ),
-      ],
+          const SizedBox(height: AppTheme.spacingL),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Earned',
+                      style: AppTheme.caption.copyWith(
+                        color: AppTheme.secondaryText,
+                      ),
+                    ),
+                    Text(
+                      '$earnedCount',
+                      style: AppTheme.headingLarge.copyWith(
+                        color: AppTheme.greyPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Total',
+                      style: AppTheme.caption.copyWith(
+                        color: AppTheme.secondaryText,
+                      ),
+                    ),
+                    Text(
+                      '$totalCount',
+                      style: AppTheme.headingLarge.copyWith(
+                        color: AppTheme.primaryText,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Completion',
+                      style: AppTheme.caption.copyWith(
+                        color: AppTheme.secondaryText,
+                      ),
+                    ),
+                    Text(
+                      '$progressPercentage%',
+                      style: AppTheme.headingLarge.copyWith(
+                        color: AppTheme.greyPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildProgressItem(String title, int current, int total) {
-    final progress = total > 0 ? current / total : 0.0;
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              title,
-              style: AppTheme.bodyLarge.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            Text(
-              '$current/$total',
-              style: AppTheme.bodyMedium.copyWith(
-                color: AppTheme.secondaryText,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppTheme.spacingS),
-        Container(
-          height: 8,
-          decoration: BoxDecoration(
-            color: AppTheme.greyDark,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: progress.clamp(0.0, 1.0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppTheme.greyPrimary,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+
 
   Widget _buildMilestonesSection(List<Achievement> achievements) {
     return Column(
@@ -275,24 +308,16 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
               overflow: TextOverflow.ellipsis,
             ),
             
-            // Progress indicator for unearned achievements
+            // Simple progress text for unearned achievements
             if (!isEarned && progress > 0) ...[
-              const SizedBox(height: AppTheme.spacingS),
-              LinearProgressIndicator(
-                value: progress,
-                backgroundColor: AppTheme.greyDark,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  AppTheme.greyPrimary.withValues(alpha: 0.7),
-                ),
-                minHeight: 3,
-              ),
-              const SizedBox(height: 2),
+              const SizedBox(height: AppTheme.spacingXS),
               Text(
-                '${(progress * 100).round()}%',
+                '${achievement.currentProgress}/${achievement.targetValue}',
                 style: AppTheme.caption.copyWith(
-                  color: AppTheme.disabledText,
-                  fontSize: 10,
+                  color: AppTheme.greyPrimary,
+                  fontWeight: FontWeight.w500,
                 ),
+                textAlign: TextAlign.center,
               ),
             ],
           ],

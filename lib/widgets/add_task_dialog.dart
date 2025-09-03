@@ -8,7 +8,7 @@ import '../utils/validation.dart';
 import '../utils/responsive.dart';
 import '../providers/providers.dart';
 import 'custom_text_field.dart';
-import 'custom_time_picker_modal.dart';
+
 
 /// Add/Edit Task Dialog Widget
 /// 
@@ -78,16 +78,83 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   }
 
   /// Show the time picker modal
-  void _showTimePicker() {
-    showCustomTimePickerModal(
-      context,
-      initialTime: _notificationTime,
-      onTimeSelected: (DateTime? selectedTime) {
-        setState(() {
-          _notificationTime = selectedTime;
-        });
+  void _showTimePicker() async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _notificationTime != null 
+          ? TimeOfDay.fromDateTime(_notificationTime!)
+          : TimeOfDay.now(),
+      helpText: 'Select reminder time',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            timePickerTheme: TimePickerThemeData(
+              backgroundColor: AppTheme.surfaceGrey,
+              hourMinuteTextColor: AppTheme.primaryText,
+              hourMinuteColor: AppTheme.backgroundDark,
+              dialHandColor: AppTheme.greyPrimary,
+              dialBackgroundColor: AppTheme.backgroundDark,
+              dialTextColor: AppTheme.primaryText,
+              entryModeIconColor: AppTheme.greyPrimary,
+              helpTextStyle: AppTheme.bodyMedium.copyWith(
+                color: AppTheme.primaryText,
+              ),
+              hourMinuteTextStyle: AppTheme.headingLarge.copyWith(
+                color: AppTheme.primaryText,
+              ),
+            ),
+            colorScheme: const ColorScheme.dark(
+              primary: AppTheme.greyPrimary,
+              onPrimary: AppTheme.primaryText,
+              surface: AppTheme.surfaceGrey,
+              onSurface: AppTheme.primaryText,
+              outline: AppTheme.greyPrimary,
+            ),
+          ),
+          child: child!,
+        );
       },
     );
+
+    if (picked != null) {
+      final now = DateTime.now();
+      final selectedDateTime = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        picked.hour,
+        picked.minute,
+      );
+      
+      setState(() {
+        _notificationTime = selectedDateTime;
+      });
+      
+      // Show confirmation feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Reminder set for ${_formatTime(picked)}',
+              style: AppTheme.bodyMedium.copyWith(color: AppTheme.primaryText),
+            ),
+            backgroundColor: AppTheme.greyPrimary,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  String _formatTime(TimeOfDay time) {
+    final hour = time.hourOfPeriod;
+    final minute = time.minute.toString().padLeft(2, '0');
+    final period = time.period == DayPeriod.am ? 'AM' : 'PM';
+    return '${hour == 0 ? 12 : hour}:$minute $period';
   }
 
 
@@ -116,8 +183,8 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
     }
   }
 
-  /// Format time for display
-  String _formatTime(DateTime time) {
+  /// Format DateTime for display
+  String _formatDateTime(DateTime time) {
     final hour = time.hour == 0 ? 12 : (time.hour > 12 ? time.hour - 12 : time.hour);
     final minute = time.minute.toString().padLeft(2, '0');
     final period = time.hour >= 12 ? 'PM' : 'AM';
@@ -419,7 +486,7 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                             const SizedBox(height: 2),
                             Text(
                               _notificationTime != null 
-                                  ? _formatTime(_notificationTime!)
+                                  ? _formatDateTime(_notificationTime!)
                                   : 'No notification set',
                               style: AppTheme.caption.copyWith(
                                 color: _notificationTime != null 
