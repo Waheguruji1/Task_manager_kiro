@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/database_service.dart';
 import '../services/preferences_service.dart';
@@ -6,6 +5,7 @@ import '../services/share_service.dart';
 import '../services/stats_service.dart';
 import '../services/achievement_service.dart';
 import '../services/notification_service.dart';
+import '../services/permission_service.dart';
 import '../services/task_cleanup_service.dart';
 import '../models/task.dart';
 import '../models/achievement.dart';
@@ -15,8 +15,11 @@ import 'user_state_notifier.dart';
 /// Database Service Provider
 /// 
 /// Provides a singleton instance of DatabaseService
+/// This provider is overridden after async initialization
 final databaseServiceProvider = Provider<DatabaseService>((ref) {
-  throw UnimplementedError('DatabaseService must be initialized asynchronously');
+  // This will be overridden by the async initialization in main.dart
+  // If accessed before initialization, it will throw an error
+  throw StateError('DatabaseService not yet initialized. Use asyncDatabaseServiceProvider for initialization.');
 });
 
 /// Async Database Service Provider
@@ -29,8 +32,11 @@ final asyncDatabaseServiceProvider = FutureProvider<DatabaseService>((ref) async
 /// Preferences Service Provider
 /// 
 /// Provides a singleton instance of PreferencesService
+/// This provider is overridden after async initialization
 final preferencesServiceProvider = Provider<PreferencesService>((ref) {
-  throw UnimplementedError('PreferencesService must be initialized asynchronously');
+  // This will be overridden by the async initialization in main.dart
+  // If accessed before initialization, it will throw an error
+  throw StateError('PreferencesService not yet initialized. Use asyncPreferencesServiceProvider for initialization.');
 });
 
 /// Async Preferences Service Provider
@@ -113,7 +119,7 @@ final taskByIdProvider = FutureProvider.family<Task?, int>((ref, id) async {
 /// This is the main provider that should be used for real-time task state updates
 final taskStateNotifierProvider = StateNotifierProvider<TaskStateNotifier, TaskState>((ref) {
   // This will be overridden by the async initialization
-  throw UnimplementedError('TaskStateNotifier must be initialized asynchronously');
+  throw StateError('TaskStateNotifier not yet initialized. Use asyncTaskStateNotifierProvider for initialization.');
 });
 
 /// Async Task State Notifier Provider
@@ -123,7 +129,13 @@ final asyncTaskStateNotifierProvider = FutureProvider<TaskStateNotifier>((ref) a
   final dbService = await ref.watch(asyncDatabaseServiceProvider.future);
   final achievementService = await ref.watch(achievementServiceProvider.future);
   final notificationService = ref.watch(notificationServiceProvider);
-  return TaskStateNotifier(dbService, achievementService, notificationService);
+  final taskStateNotifier = TaskStateNotifier(dbService, achievementService, notificationService);
+  
+  // Connect with task change notifier for stats updates
+  final taskChangeNotifier = ref.read(taskChangeNotifierProvider.notifier);
+  taskStateNotifier.setTaskChangeCallback(() => taskChangeNotifier.notifyTasksChanged());
+  
+  return taskStateNotifier;
 });
 
 /// Initialized Task State Notifier Provider
@@ -132,22 +144,22 @@ final asyncTaskStateNotifierProvider = FutureProvider<TaskStateNotifier>((ref) a
 /// This is initialized asynchronously and then provides real-time state updates
 final initializedTaskStateNotifierProvider = StateNotifierProvider<TaskStateNotifier, TaskState>((ref) {
   // This will be overridden when the async initialization completes
-  throw UnimplementedError('Use asyncTaskStateNotifierProvider for initialization');
+  throw StateError('TaskStateNotifier not yet initialized. Use asyncTaskStateNotifierProvider for initialization.');
 });
 
 /// Task State Stream Provider
 /// 
 /// Provides a stream of task state changes for real-time UI updates
+/// Now uses proper StateNotifier watching instead of polling
 final taskStateStreamProvider = StreamProvider<TaskState>((ref) async* {
   final taskStateNotifier = await ref.watch(asyncTaskStateNotifierProvider.future);
   
   // Emit initial state
   yield taskStateNotifier.currentState;
   
-  // Create a stream that emits state changes every 100ms
-  // This ensures the UI updates when the TaskStateNotifier state changes
-  await for (final _ in Stream.periodic(const Duration(milliseconds: 100))) {
-    yield taskStateNotifier.currentState;
+  // Watch for state changes using StateNotifier's stream
+  await for (final state in taskStateNotifier.stream) {
+    yield state;
   }
 });
 
@@ -180,7 +192,7 @@ final realtimeRoutineTasksProvider = FutureProvider<List<Task>>((ref) async {
 /// 
 /// Provides a StateNotifier for managing user authentication state and operations
 final userStateNotifierProvider = StateNotifierProvider<UserStateNotifier, UserState>((ref) {
-  throw UnimplementedError('UserStateNotifier must be initialized with PreferencesService');
+  throw StateError('UserStateNotifier not yet initialized. Use asyncUserStateNotifierProvider for initialization.');
 });
 
 /// Async User State Notifier Provider
@@ -208,11 +220,8 @@ final achievementServiceProvider = FutureProvider<AchievementService>((ref) asyn
 /// All Achievements Provider
 /// 
 /// Provides a list of all achievements from the database
-/// Automatically refreshes when task state changes to ensure real-time updates
-final allAchievementsProvider = FutureProvider<List<Achievement>>((ref) async {
-  // Watch task state to trigger refresh when tasks change
-  ref.watch(taskStateNotifierProvider);
-  
+/// Uses autoDispose to prevent memory leaks and avoid circular dependencies
+final allAchievementsProvider = FutureProvider.autoDispose<List<Achievement>>((ref) async {
   final achievementService = await ref.watch(achievementServiceProvider.future);
   return await achievementService.getAllAchievements();
 });
@@ -220,11 +229,8 @@ final allAchievementsProvider = FutureProvider<List<Achievement>>((ref) async {
 /// Earned Achievements Provider
 /// 
 /// Provides a list of earned achievements
-/// Automatically refreshes when task state changes to ensure real-time updates
-final earnedAchievementsProvider = FutureProvider<List<Achievement>>((ref) async {
-  // Watch task state to trigger refresh when tasks change
-  ref.watch(taskStateNotifierProvider);
-  
+/// Uses autoDispose to prevent memory leaks and avoid circular dependencies
+final earnedAchievementsProvider = FutureProvider.autoDispose<List<Achievement>>((ref) async {
   final achievementService = await ref.watch(achievementServiceProvider.future);
   return await achievementService.getEarnedAchievements();
 });
@@ -232,14 +238,17 @@ final earnedAchievementsProvider = FutureProvider<List<Achievement>>((ref) async
 /// Unearned Achievements Provider
 /// 
 /// Provides a list of unearned achievements with progress
-/// Automatically refreshes when task state changes to ensure real-time updates
-final unearnedAchievementsProvider = FutureProvider<List<Achievement>>((ref) async {
-  // Watch task state to trigger refresh when tasks change
-  ref.watch(taskStateNotifierProvider);
-  
+/// Uses autoDispose to prevent memory leaks and avoid circular dependencies
+final unearnedAchievementsProvider = FutureProvider.autoDispose<List<Achievement>>((ref) async {
   final achievementService = await ref.watch(achievementServiceProvider.future);
   return await achievementService.getUnearnedAchievements();
 });
+
+/// Achievement Refresh Trigger Provider
+/// 
+/// Simple state provider to trigger achievement refreshes manually
+/// This avoids circular dependencies while allowing manual refresh
+final achievementRefreshTriggerProvider = StateProvider<int>((ref) => 0);
 
 /// Completion Heatmap Data Provider
 /// 
@@ -318,43 +327,22 @@ final taskChangeNotifierProvider = StateNotifierProvider<TaskChangeNotifier, int
 /// Task Change Notifier Class
 /// 
 /// Monitors task state changes and invalidates dependent providers
+/// Now uses proper reactive approach instead of polling
 class TaskChangeNotifier extends StateNotifier<int> {
   final Ref _ref;
-  int _lastTaskCount = 0;
-  int _lastCompletedCount = 0;
   
-  TaskChangeNotifier(this._ref) : super(0) {
-    _startMonitoring();
-  }
+  TaskChangeNotifier(this._ref) : super(0);
   
-  void _startMonitoring() {
-    // Monitor task state changes every 200ms
-    Timer.periodic(const Duration(milliseconds: 200), (timer) async {
-      try {
-        final taskStateNotifier = await _ref.read(asyncTaskStateNotifierProvider.future);
-        final taskState = taskStateNotifier.currentState;
-        
-        final currentTaskCount = taskState.everydayTasks.length + taskState.routineTasks.length;
-        final currentCompletedCount = taskState.everydayTasks.where((t) => t.isCompleted).length +
-                                    taskState.routineTasks.where((t) => t.isCompleted).length;
-        
-        // Check if tasks or completion status changed
-        if (currentTaskCount != _lastTaskCount || currentCompletedCount != _lastCompletedCount) {
-          _lastTaskCount = currentTaskCount;
-          _lastCompletedCount = currentCompletedCount;
-          
-          // Invalidate stats providers to trigger refresh
-          _ref.invalidate(completionHeatmapDataProvider);
-          _ref.invalidate(creationCompletionHeatmapDataProvider);
-          _ref.invalidate(realtimeStatsProvider);
-          
-          // Update state to notify listeners
-          state = state + 1;
-        }
-      } catch (e) {
-        // Continue monitoring on error
-      }
-    });
+  /// Notify that tasks have changed
+  /// This should be called by TaskStateNotifier when tasks are modified
+  void notifyTasksChanged() {
+    // Invalidate stats providers to trigger refresh
+    _ref.invalidate(completionHeatmapDataProvider);
+    _ref.invalidate(creationCompletionHeatmapDataProvider);
+    _ref.invalidate(realtimeStatsProvider);
+    
+    // Update state to notify listeners
+    state = state + 1;
   }
 }
 
@@ -363,6 +351,13 @@ class TaskChangeNotifier extends StateNotifier<int> {
 /// Provides a singleton instance of NotificationService
 final notificationServiceProvider = Provider<NotificationService>((ref) {
   return NotificationService();
+});
+
+/// Permission Service Provider
+/// 
+/// Provides a singleton instance of PermissionService
+final permissionServiceProvider = Provider<PermissionService>((ref) {
+  return PermissionService();
 });
 
 /// Notifications Enabled Provider

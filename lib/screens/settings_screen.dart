@@ -4,8 +4,10 @@ import '../utils/theme.dart';
 import '../utils/constants.dart';
 import '../utils/error_handler.dart';
 import '../utils/responsive.dart';
+import '../utils/routes.dart';
 import '../providers/providers.dart';
 import '../services/share_service.dart';
+import '../widgets/permission_status_widget.dart';
 
 /// Settings Screen Widget
 ///
@@ -145,16 +147,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final notificationService = ref.read(notificationServiceProvider);
 
       if (enabled) {
-        // Request permission first
-        final hasPermission = await notificationService.requestPermissions();
-        if (!hasPermission) {
+        // Request all permissions with comprehensive flow
+        if (!mounted) return;
+        final result = await notificationService.requestAllPermissions(
+          context: context,
+          showDialogs: true,
+        );
+        
+        if (!result.success && !result.partialSuccess) {
           if (mounted) {
             ErrorHandler.showErrorSnackBar(
               context,
-              'Notification permission denied. Please enable in device settings.',
+              result.message,
             );
+            
+            // Show settings dialog if manual action is needed
+            if (result.needsManualAction && mounted) {
+              await Future.delayed(const Duration(milliseconds: 500));
+              if (mounted) {
+                await notificationService.showPermissionSettingsDialog(context);
+              }
+            }
           }
           return;
+        }
+        
+        // Show warning if only partial success (basic notifications but no exact alarms)
+        if (result.partialSuccess && mounted) {
+          ErrorHandler.showWarningSnackBar(
+            context,
+            result.message,
+          );
         }
 
         // Enable notifications and reschedule all
@@ -193,26 +216,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  /// Handle request notification permission
+  /// Handle request notification permission with comprehensive flow
   Future<void> _handleRequestPermission() async {
     try {
       final notificationService = ref.read(notificationServiceProvider);
-      final hasPermission = await notificationService.requestPermissions();
+      
+      // Use the new comprehensive permission request
+      final result = await notificationService.requestAllPermissions(
+        context: context,
+        showDialogs: true,
+      );
 
       // Refresh permission status
       ref.invalidate(notificationPermissionStatusProvider);
 
       if (mounted) {
-        if (hasPermission) {
+        if (result.success) {
           ErrorHandler.showSuccessSnackBar(
             context,
-            'Notification permission granted!',
+            result.message,
           );
         } else {
           ErrorHandler.showErrorSnackBar(
             context,
-            'Notification permission denied. Please enable in device settings.',
+            result.message,
           );
+          
+          // If manual action is needed, show settings dialog
+          if (result.needsManualAction && mounted) {
+            await Future.delayed(const Duration(milliseconds: 500));
+            if (mounted) {
+              await notificationService.showPermissionSettingsDialog(context);
+            }
+          }
         }
       }
     } catch (e) {
@@ -223,6 +259,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         );
       }
     }
+  }
+
+  /// Show detailed permission information dialog
+  Future<void> _showDetailedPermissionInfo() async {
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Permission Details'),
+          content: const SizedBox(
+            width: double.maxFinite,
+            child: DetailedPermissionStatusWidget(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _handleRequestPermission();
+              },
+              child: const Text('Fix Permissions'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   /// Handle send test notification
@@ -849,6 +916,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required String subtitle,
     required bool hasPermission,
     VoidCallback? onRequestPermission,
+    bool showDetailButton = false,
   }) {
     return Container(
       padding: const EdgeInsets.all(AppTheme.spacingM),
@@ -889,18 +957,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
             ),
           ),
-          if (!hasPermission && onRequestPermission != null)
-            TextButton(
-              onPressed: onRequestPermission,
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.greyPrimary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppTheme.spacingS,
-                  vertical: AppTheme.spacingXS,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!hasPermission && onRequestPermission != null)
+                TextButton(
+                  onPressed: onRequestPermission,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.greyPrimary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.spacingS,
+                      vertical: AppTheme.spacingXS,
+                    ),
+                  ),
+                  child: const Text(AppStrings.requestPermissionButton),
                 ),
-              ),
-              child: const Text(AppStrings.requestPermissionButton),
-            ),
+              if (showDetailButton)
+                TextButton(
+                  onPressed: _showDetailedPermissionInfo,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.greyPrimary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.spacingS,
+                      vertical: AppTheme.spacingXS,
+                    ),
+                  ),
+                  child: const Text('Details'),
+                ),
+            ],
+          ),
         ],
       ),
     );
@@ -1032,6 +1117,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       },
                     ),
 
+                    // Permission Status Widget
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: AppTheme.spacingM),
+                      child: PermissionStatusWidget(),
+                    ),
+
                     // Divider
                     Container(
                       height: 1,
@@ -1058,6 +1149,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             hasPermission: hasPermission,
                             onRequestPermission:
                                 hasPermission ? null : _handleRequestPermission,
+                            showDetailButton: true,
                           ),
                           loading: () => _buildPermissionStatusItem(
                             icon: Icons.info,

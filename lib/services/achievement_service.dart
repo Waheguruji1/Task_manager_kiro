@@ -28,8 +28,10 @@ class AchievementService {
   /// Initialize the service with database service
   Future<void> initialize() async {
     try {
+      ErrorHandler.logInfo('Initializing achievement service');
       _databaseService ??= await DatabaseService.getInstance();
       await _databaseService!.initialize();
+      ErrorHandler.logInfo('Achievement service initialized successfully');
     } catch (e) {
       ErrorHandler.logError(e, context: 'Achievement service initialization', type: ErrorType.unknown);
       throw AppException(
@@ -46,7 +48,10 @@ class AchievementService {
   Future<List<Achievement>> getAllAchievements() async {
     try {
       await _ensureInitialized();
-      return await _databaseService!.getAllAchievements();
+      ErrorHandler.logInfo('Getting all achievements from database');
+      final achievements = await _databaseService!.getAllAchievements();
+      ErrorHandler.logInfo('Retrieved ${achievements.length} achievements from database');
+      return achievements;
     } catch (e) {
       ErrorHandler.logError(e, context: 'Get all achievements', type: ErrorType.database);
       if (e is AppException) rethrow;

@@ -720,6 +720,12 @@ class AppDatabase extends _$AppDatabase {
     final result = await countQuery.getSingle();
     return result.read(achievements.id.count()) ?? 0;
   }
+  
+  /// Public method to initialize default achievements
+  /// This can be called to ensure achievements are properly set up
+  Future<void> initializeDefaultAchievements() async {
+    await _initializeDefaultAchievements();
+  }
 
   /// Resets all achievement progress (useful for testing or data reset)
   /// 

@@ -7,7 +7,7 @@ class PreferencesService {
   static const String _firstLaunchKey = AppConstants.firstLaunchKey;
   static const String _lastResetDateKey = AppConstants.lastResetDateKey;
   static const String _notificationsEnabledKey = AppConstants.notificationsEnabledKey;
-  static const String _autoDeleteEnabledKey = 'auto_delete_enabled';
+  static const String _autoDeleteEnabledKey = AppConstants.autoDeleteEnabledKey;
   
   static PreferencesService? _instance;
   static SharedPreferences? _preferences;

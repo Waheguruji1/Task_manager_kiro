@@ -7,6 +7,7 @@ import '../utils/constants.dart';
 import '../utils/error_handler.dart';
 import '../utils/validation.dart';
 import '../utils/responsive.dart';
+import '../utils/routes.dart';
 import '../providers/providers.dart';
 
 /// Welcome Screen Widget
@@ -76,7 +77,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
   /// Navigate to main screen
   void _navigateToMain() {
-    Navigator.of(context).pushReplacementNamed('/main');
+    Navigator.of(context).pushReplacementNamed(AppRoutes.main);
   }
 
   /// Build the logo and title without container
@@ -172,6 +173,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       ),
     );
   }
+
+
 
   @override
   Widget build(BuildContext context) {

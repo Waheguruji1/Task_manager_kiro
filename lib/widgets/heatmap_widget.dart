@@ -19,8 +19,8 @@ class HeatmapWidget extends StatefulWidget {
     this.onCellTap,
     this.tooltipBuilder,
     this.isMultiValue = false,
-    this.cellSize = 14.0,
-    this.spacing = 3.0,
+    this.cellSize = 12.0,
+    this.spacing = 2.0,
   });
 
   @override
@@ -29,8 +29,14 @@ class HeatmapWidget extends StatefulWidget {
 
 class _HeatmapWidgetState extends State<HeatmapWidget> {
   OverlayEntry? _overlayEntry;
-  final GlobalKey _containerKey = GlobalKey();
-  DateTime _selectedMonth = DateTime.now();
+  late DateTime _selectedMonth;
+  final int _currentYear = DateTime.now().year;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedMonth = DateTime(_currentYear, DateTime.now().month, 1);
+  }
 
   @override
   void dispose() {
@@ -45,25 +51,24 @@ class _HeatmapWidgetState extends State<HeatmapWidget> {
 
   void _showTooltip(BuildContext context, DateTime date, dynamic value, Offset position) {
     _removeTooltip();
-
     if (widget.tooltipBuilder == null) return;
 
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
-        left: position.dx - 60,
-        top: position.dy - 80,
+        left: (position.dx - 60).clamp(10.0, MediaQuery.of(context).size.width - 130),
+        top: (position.dy - 80).clamp(10.0, MediaQuery.of(context).size.height - 80),
         child: Material(
           color: Colors.transparent,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.black87,
-              borderRadius: BorderRadius.circular(4),
+              color: Colors.deepPurple.shade900,
+              borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
+                  color: Colors.black.withOpacity(0.6),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
@@ -74,37 +79,32 @@ class _HeatmapWidgetState extends State<HeatmapWidget> {
     );
 
     Overlay.of(context).insert(_overlayEntry!);
-
-    // Auto-remove tooltip after 3 seconds
-    Future.delayed(const Duration(seconds: 3), () {
-      _removeTooltip();
-    });
+    Future.delayed(const Duration(seconds: 2), _removeTooltip);
   }
 
   Color _getIntensityColor(dynamic value) {
-    if (value == null) return Colors.grey.shade800;
+    if (value == null) return Colors.deepPurple.shade800;
 
     double intensity = 0.0;
-    
+
     if (widget.isMultiValue && value is Map<String, int>) {
-      // For multi-value data, use the sum or a specific calculation
       int total = value.values.fold(0, (sum, val) => sum + val);
       intensity = _calculateIntensity(total);
     } else if (value is int) {
       intensity = _calculateIntensity(value);
     }
 
+    // Purple shades from deep purple to lighter purple
     return Color.lerp(
-      Colors.grey.shade800,
-      widget.baseColor,
+      Colors.deepPurple.shade900,
+      Colors.deepPurple.shade300,
       intensity.clamp(0.0, 1.0),
     )!;
   }
 
   double _calculateIntensity(int value) {
     if (value == 0) return 0.0;
-    
-    // Find max value in dataset for normalization
+
     int maxValue = 0;
     for (var data in widget.data.values) {
       if (widget.isMultiValue && data is Map<String, int>) {
@@ -114,20 +114,16 @@ class _HeatmapWidgetState extends State<HeatmapWidget> {
         maxValue = data;
       }
     }
-
     if (maxValue == 0) return 0.0;
-    
-    // Use logarithmic scale for better visual distribution
-    return (value / maxValue).clamp(0.1, 1.0);
+
+    return (value / maxValue).clamp(0.2, 1.0);
   }
 
   Widget _buildDayCell(DateTime date, dynamic value) {
     final color = _getIntensityColor(value);
-    
+
     return GestureDetector(
-      onTap: () {
-        widget.onCellTap?.call(date, value);
-      },
+      onTap: () => widget.onCellTap?.call(date, value),
       onTapDown: (details) {
         if (widget.tooltipBuilder != null) {
           final RenderBox renderBox = context.findRenderObject() as RenderBox;
@@ -141,6 +137,10 @@ class _HeatmapWidgetState extends State<HeatmapWidget> {
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(3),
+          border: Border.all(
+            color: Colors.deepPurple.shade700.withOpacity(0.4),
+            width: 0.7,
+          ),
         ),
       ),
     );
@@ -149,7 +149,7 @@ class _HeatmapWidgetState extends State<HeatmapWidget> {
   Widget _buildMonthGrid(DateTime month) {
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
     final firstDayOfMonth = DateTime(month.year, month.month, 1);
-    final firstWeekday = firstDayOfMonth.weekday % 7; // 0 = Sunday
+    final firstWeekday = firstDayOfMonth.weekday % 7;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -165,18 +165,18 @@ class _HeatmapWidgetState extends State<HeatmapWidget> {
                       child: Text(
                         day,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Color(0xFF8E8E93),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
+                        style: TextStyle(
+                          color: Colors.deepPurple.shade200,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ))
                 .toList(),
           ),
         ),
-        const SizedBox(height: 8),
-        
+        const SizedBox(height: 12),
+
         // Calendar grid
         SizedBox(
           width: 7 * (widget.cellSize + widget.spacing) - widget.spacing,
@@ -197,7 +197,7 @@ class _HeatmapWidgetState extends State<HeatmapWidget> {
                 final date = DateTime(month.year, month.month, index + 1);
                 final normalizedDate = DateTime(date.year, date.month, date.day);
                 final value = widget.data[normalizedDate];
-                
+
                 return _buildDayCell(normalizedDate, value);
               }),
             ],
@@ -211,109 +211,110 @@ class _HeatmapWidgetState extends State<HeatmapWidget> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1E),
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.deepPurple.shade900,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.deepPurple.shade700),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.deepPurple.shade900.withOpacity(0.7),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      child: GestureDetector(
-        onTap: _showMonthPicker,
-        child: Row(
-          children: [
-            Text(
-              DateFormat('MMMM yyyy').format(_selectedMonth),
-              style: const TextStyle(
-                color: Color(0xFF8E8E93),
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-            const Spacer(),
-            const Icon(
-              Icons.calendar_month,
-              color: Color(0xFF8E8E93),
-              size: 20,
-            ),
-          ],
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          dropdownColor: Colors.deepPurple.shade900,
+          value: _selectedMonth.month,
+          isExpanded: true,
+          icon: Icon(Icons.keyboard_arrow_down, color: Colors.deepPurple.shade200),
+          style: TextStyle(
+            color: Colors.deepPurple.shade100,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+          items: List.generate(12, (index) {
+            final month = index + 1;
+            final monthName = DateFormat('MMMM').format(DateTime(_currentYear, month));
+            return DropdownMenuItem<int>(
+              value: month,
+              child: Text('$monthName $_currentYear'),
+            );
+          }),
+          onChanged: (int? month) {
+            if (month != null) {
+              setState(() {
+                _selectedMonth = DateTime(_currentYear, month, 1);
+              });
+            }
+          },
         ),
       ),
     );
   }
 
-  void _showMonthPicker() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedMonth,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF6B7280),
-              onPrimary: Colors.white,
-              surface: Color(0xFF1C1C1E),
-              onSurface: Colors.white,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    
-    if (picked != null && picked != _selectedMonth) {
-      setState(() {
-        _selectedMonth = DateTime(picked.year, picked.month, 1);
-      });
-    }
-  }
-
-  Widget _buildSelectedMonthView() {
-    return _buildMonthGrid(_selectedMonth);
-  }
-
   Widget _buildLegend() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1E),
-        borderRadius: BorderRadius.circular(10),
+        color: Colors.deepPurple.shade900,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.deepPurple.shade700),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.deepPurple.shade900.withOpacity(0.7),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            'Activity Level',
+            style: TextStyle(
+              color: Colors.deepPurple.shade100,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'low',
+              Text(
+                'Low',
                 style: TextStyle(
-                  color: Color(0xFF8E8E93),
+                  color: Colors.deepPurple.shade200,
                   fontSize: 12,
-                  fontWeight: FontWeight.w400,
                 ),
               ),
-              const Text(
-                'high',
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  height: 10,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(5),
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.deepPurple.shade900,
+                        Colors.deepPurple.shade700.withOpacity(0.7),
+                        Colors.deepPurple.shade500.withOpacity(0.7),
+                        Colors.deepPurple.shade300,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'High',
                 style: TextStyle(
-                  color: Color(0xFF8E8E93),
+                  color: Colors.deepPurple.shade200,
                   fontSize: 12,
-                  fontWeight: FontWeight.w400,
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 8),
-          Container(
-            height: 8,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(4),
-              gradient: LinearGradient(
-                colors: [
-                  Colors.grey.shade800,
-                  widget.baseColor.withValues(alpha: 0.3),
-                  widget.baseColor.withValues(alpha: 0.6),
-                  widget.baseColor,
-                ],
-              ),
-            ),
           ),
         ],
       ),
@@ -325,76 +326,71 @@ class _HeatmapWidgetState extends State<HeatmapWidget> {
     return GestureDetector(
       onTap: _removeTooltip,
       child: Container(
-        key: _containerKey,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: const Color(0xFF1C1C1E),
+          color: Colors.deepPurple.shade900,
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.deepPurple.shade700),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.deepPurple.shade900.withOpacity(0.9),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title with info icon
+            // Header
             Row(
               children: [
-                Text(
-                  widget.title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 23,
-                    fontWeight: FontWeight.w400,
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    style: TextStyle(
+                      color: Colors.deepPurple.shade100,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
                 Container(
-                  width: 20,
-                  height: 20,
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF8E8E93),
-                    borderRadius: BorderRadius.circular(10),
+                    color: Colors.deepPurple.shade800,
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.info_outline,
-                    color: Colors.white,
-                    size: 12,
+                    color: Colors.deepPurple.shade200,
+                    size: 18,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            
+            const SizedBox(height: 24),
+
             // Month picker
             _buildMonthPicker(),
-            const SizedBox(height: 20),
-            
+            const SizedBox(height: 24),
+
             // Heatmap container
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFF000000),
-                borderRadius: BorderRadius.circular(10),
+                color: Colors.deepPurple.shade800,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.deepPurple.shade700),
               ),
               child: Center(
-                child: _buildSelectedMonthView(),
+                child: _buildMonthGrid(_selectedMonth),
               ),
             ),
             const SizedBox(height: 20),
-            
+
             // Legend
             _buildLegend(),
-            const SizedBox(height: 16),
-            
-            // Completion Status label
-            const Center(
-              child: Text(
-                'Completion Status',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ),
           ],
         ),
       ),

@@ -5,6 +5,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import '../models/task.dart';
+import 'permission_service.dart';
 
 /// Notification permission status enum
 enum NotificationPermissionStatus {
@@ -312,6 +313,7 @@ class NotificationService {
   bool _timezoneInitialized = false;
   final Random _random = Random();
   PlatformCompatibility? _platformCompatibility;
+  final PermissionService _permissionService = PermissionService();
 
   /// Initialize the notification service with enhanced setup and retry logic
   /// 
@@ -373,6 +375,9 @@ class NotificationService {
           initializationSettings,
           onDidReceiveNotificationResponse: _onNotificationTapped,
         );
+
+        // Initialize permission service
+        _permissionService.initialize(_flutterLocalNotificationsPlugin);
 
         // Step 3: Detect platform compatibility and create notification channels
         debugPrint('Step 3: Detecting platform compatibility...');
@@ -552,6 +557,57 @@ class NotificationService {
     }
 
     return result ?? false;
+  }
+
+  /// Request all required permissions with user-friendly flow
+  /// 
+  /// This method handles both basic notifications and exact alarms
+  /// Returns a detailed result with user guidance
+  Future<PermissionRequestResult> requestAllPermissions({
+    required BuildContext context,
+    bool showDialogs = true,
+  }) async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+
+    if (!context.mounted) {
+      return PermissionRequestResult(
+        success: false,
+        message: 'Context no longer available',
+        needsManualAction: false,
+      );
+    }
+
+    return await _permissionService.requestAllPermissions(
+      context: context,
+      showDialogs: showDialogs,
+    );
+  }
+
+  /// Check all permission status
+  /// 
+  /// Returns comprehensive permission status
+  Future<PermissionStatus> checkAllPermissions() async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+
+    return await _permissionService.checkAllPermissions();
+  }
+
+  /// Get user-friendly permission status message
+  Future<String> getPermissionStatusMessage() async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+
+    return await _permissionService.getPermissionStatusMessage();
+  }
+
+  /// Show settings dialog to guide user
+  Future<void> showPermissionSettingsDialog(BuildContext context) async {
+    await _permissionService.showSettingsDialog(context);
   }
 
   /// Check if notifications are currently enabled

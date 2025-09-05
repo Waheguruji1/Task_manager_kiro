@@ -52,9 +52,22 @@ class TaskStateNotifier extends StateNotifier<TaskState> {
   final DatabaseService _databaseService;
   final AchievementService _achievementService;
   final NotificationService _notificationService;
+  
+  // Callback to notify when tasks change (for stats providers)
+  void Function()? _onTasksChanged;
 
   TaskStateNotifier(this._databaseService, this._achievementService, this._notificationService) : super(const TaskState()) {
     loadTasks();
+  }
+  
+  /// Set callback for when tasks change
+  void setTaskChangeCallback(void Function() callback) {
+    _onTasksChanged = callback;
+  }
+  
+  /// Notify that tasks have changed
+  void _notifyTasksChanged() {
+    _onTasksChanged?.call();
   }
 
   /// Get current state (public getter)
@@ -125,8 +138,22 @@ class TaskStateNotifier extends StateNotifier<TaskState> {
       final taskId = await _databaseService.createTask(task);
       
       if (taskId > 0) {
-        // Reload tasks to get the updated list
-        await loadTasks();
+        // Update task with the generated ID
+        final newTask = task.copyWith(id: taskId);
+        
+        // Add task to appropriate list locally (more efficient than reloading all)
+        if (task.isRoutine) {
+          final updatedRoutineTasks = [...state.routineTasks, newTask];
+          final sortedRoutineTasks = Task.sortByPriority(updatedRoutineTasks);
+          state = state.copyWith(routineTasks: sortedRoutineTasks, isLoading: false);
+        } else {
+          final updatedEverydayTasks = [...state.everydayTasks, newTask];
+          final sortedEverydayTasks = Task.sortByPriority(updatedEverydayTasks);
+          state = state.copyWith(everydayTasks: sortedEverydayTasks, isLoading: false);
+        }
+        
+        // Notify that tasks have changed
+        _notifyTasksChanged();
         
         // Check and update achievements after task creation
         await _checkAndUpdateAchievements();
@@ -204,8 +231,19 @@ class TaskStateNotifier extends StateNotifier<TaskState> {
       final success = await _databaseService.updateTask(task);
       
       if (success) {
-        // Reload tasks to get the updated list
-        await loadTasks();
+        // Update task locally (more efficient than reloading all)
+        if (task.isRoutine) {
+          final updatedRoutineTasks = state.routineTasks.map((t) => t.id == task.id ? task : t).toList();
+          final sortedRoutineTasks = Task.sortByPriority(updatedRoutineTasks);
+          state = state.copyWith(routineTasks: sortedRoutineTasks, isLoading: false);
+        } else {
+          final updatedEverydayTasks = state.everydayTasks.map((t) => t.id == task.id ? task : t).toList();
+          final sortedEverydayTasks = Task.sortByPriority(updatedEverydayTasks);
+          state = state.copyWith(everydayTasks: sortedEverydayTasks, isLoading: false);
+        }
+        
+        // Notify that tasks have changed
+        _notifyTasksChanged();
         
         // Check and update achievements after task update
         await _checkAndUpdateAchievements();
@@ -252,8 +290,18 @@ class TaskStateNotifier extends StateNotifier<TaskState> {
       final success = await _databaseService.deleteTask(taskId);
       
       if (success) {
-        // Reload tasks to get the updated list
-        await loadTasks();
+        // Remove task locally (more efficient than reloading all)
+        final updatedEverydayTasks = state.everydayTasks.where((t) => t.id != taskId).toList();
+        final updatedRoutineTasks = state.routineTasks.where((t) => t.id != taskId).toList();
+        
+        state = state.copyWith(
+          everydayTasks: updatedEverydayTasks,
+          routineTasks: updatedRoutineTasks,
+          isLoading: false,
+        );
+        
+        // Notify that tasks have changed
+        _notifyTasksChanged();
         
         // Check and update achievements after task deletion
         await _checkAndUpdateAchievements();

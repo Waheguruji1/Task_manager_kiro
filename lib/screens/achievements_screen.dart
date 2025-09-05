@@ -27,53 +27,67 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
         builder: (context, ref, child) {
           final achievementsAsync = ref.watch(allAchievementsProvider);
           
+          // Debug logging
+          print('Achievements screen: watching allAchievementsProvider');
+          
           return achievementsAsync.when(
-            data: (achievements) => RefreshIndicator(
-              onRefresh: () => ref.refresh(allAchievementsProvider.future),
-              color: AppTheme.greyPrimary,
-              backgroundColor: AppTheme.surfaceGrey,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.all(ResponsiveUtils.getSpacing(context, AppTheme.spacingM)),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildProgressSection(achievements),
-                    const SizedBox(height: AppTheme.spacingXL),
-                    _buildMilestonesSection(achievements),
-                  ],
-                ),
-              ),
-            ),
-            loading: () => const Center(
-              child: CircularProgressIndicator(
+            data: (achievements) {
+              return RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(allAchievementsProvider);
+                  await ref.read(allAchievementsProvider.future);
+                },
                 color: AppTheme.greyPrimary,
-              ),
-            ),
-            error: (error, stack) => Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 48,
-                    color: AppTheme.secondaryText,
+                backgroundColor: AppTheme.surfaceGrey,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.all(ResponsiveUtils.getSpacing(context, AppTheme.spacingM)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildProgressSection(achievements),
+                      const SizedBox(height: AppTheme.spacingXL),
+                      _buildMilestonesSection(achievements),
+                    ],
                   ),
-                  const SizedBox(height: AppTheme.spacingM),
-                  Text(
-                    'Failed to load achievements',
-                    style: AppTheme.bodyLarge.copyWith(
+                ),
+              );
+            },
+            loading: () {
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: AppTheme.greyPrimary,
+                ),
+              );
+            },
+            error: (error, stack) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
                       color: AppTheme.secondaryText,
                     ),
-                  ),
-                  const SizedBox(height: AppTheme.spacingM),
-                  ElevatedButton(
-                    onPressed: () => ref.refresh(allAchievementsProvider.future),
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            ),
+                    const SizedBox(height: AppTheme.spacingM),
+                    Text(
+                      'Failed to load achievements',
+                      style: AppTheme.bodyLarge.copyWith(
+                        color: AppTheme.secondaryText,
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingM),
+                    ElevatedButton(
+                      onPressed: () {
+                        ref.invalidate(allAchievementsProvider);
+                      },
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
+            },
           );
         },
       ),

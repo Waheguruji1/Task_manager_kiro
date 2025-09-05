@@ -17,6 +17,7 @@ class AppConstants {
   static const String firstLaunchKey = 'first_launch';
   static const String lastResetDateKey = 'last_reset_date';
   static const String notificationsEnabledKey = 'notifications_enabled';
+  static const String autoDeleteEnabledKey = 'auto_delete_enabled';
 
   // Database Constants
   static const String databaseName = 'task_manager.db';
@@ -39,15 +40,8 @@ class AppConstants {
   static const int minTaskTitleLength = 1;
 }
 
-/// Route Names
-class AppRoutes {
-  // Private constructor to prevent instantiation
-  AppRoutes._();
-
-  static const String welcome = '/welcome';
-  static const String home = '/home';
-  static const String main = '/main';
-}
+/// Route Names - moved to routes.dart to avoid conflicts
+/// Use AppRoutes from routes.dart instead
 
 /// String Literals used throughout the app
 class AppStrings {

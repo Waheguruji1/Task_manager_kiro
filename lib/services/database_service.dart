@@ -25,6 +25,9 @@ class DatabaseService {
       _database ??= AppDatabase();
       // Test database connection
       await _database!.select(_database!.tasks).get();
+      
+      // Ensure achievements are initialized
+      await _ensureAchievementsInitialized();
     } catch (e) {
       ErrorHandler.logError(e, context: 'Database initialization', type: ErrorType.database);
       throw AppException(
@@ -32,6 +35,23 @@ class DatabaseService {
         type: ErrorType.database,
         originalError: e,
       );
+    }
+  }
+  
+  /// Ensure achievements are initialized in the database
+  Future<void> _ensureAchievementsInitialized() async {
+    try {
+      // Check if achievements exist
+      final achievementCount = await _database!.getTotalAchievementCount();
+      
+      // If no achievements exist, initialize them
+      if (achievementCount == 0) {
+        ErrorHandler.logInfo('No achievements found, initializing default achievements');
+        await _database!.initializeDefaultAchievements();
+      }
+    } catch (e) {
+      ErrorHandler.logError(e, context: 'Ensure achievements initialized', type: ErrorType.database);
+      // Don't throw here, as this is not critical for basic app functionality
     }
   }
   

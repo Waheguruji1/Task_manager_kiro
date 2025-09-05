@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/modern_add_task_dialog.dart';
+import '../widgets/shimmer_loading.dart';
+import '../widgets/paginated_task_list.dart';
 import '../models/task.dart';
 import '../utils/theme.dart';
 import '../utils/constants.dart';
@@ -22,7 +24,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
   DateTime _lastCheckedDate = DateTime.now();
 
@@ -30,35 +32,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    WidgetsBinding.instance.addObserver(this);
     _initializeDailyTasks();
-    _startDateChecker();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     super.dispose();
   }
 
-  /// Start checking for date changes to refresh UI
-  void _startDateChecker() {
-    // Check every minute if the date has changed
-    Future.delayed(const Duration(minutes: 1), () {
-      if (mounted) {
-        final now = DateTime.now();
-        final currentDate = DateTime(now.year, now.month, now.day);
-        final lastDate = DateTime(_lastCheckedDate.year, _lastCheckedDate.month, _lastCheckedDate.day);
-        
-        if (currentDate != lastDate) {
-          _lastCheckedDate = now;
-          // Refresh tasks when date changes
-          ref.invalidate(taskStateStreamProvider);
-          _initializeDailyTasks();
-        }
-        
-        _startDateChecker(); // Continue checking
-      }
-    });
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    // Check for date changes when app comes to foreground
+    if (state == AppLifecycleState.resumed) {
+      _checkForDateChange();
+    }
+  }
+
+  /// Check if date has changed and refresh tasks if needed
+  void _checkForDateChange() {
+    final now = DateTime.now();
+    final currentDate = DateTime(now.year, now.month, now.day);
+    final lastDate = DateTime(_lastCheckedDate.year, _lastCheckedDate.month, _lastCheckedDate.day);
+    
+    if (currentDate != lastDate) {
+      _lastCheckedDate = now;
+      // Refresh tasks when date changes
+      ref.invalidate(taskStateStreamProvider);
+      _initializeDailyTasks();
+    }
   }
 
   /// Initialize daily routine tasks if needed
@@ -160,6 +166,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final confirmed = await _showDeleteConfirmationDialog(task.title);
     if (!confirmed) return;
 
+    // Show optimistic success message immediately
+    if (mounted) {
+      ErrorHandler.showSuccessSnackBar(
+          context, AppStrings.taskDeletedSuccess);
+    }
+
     try {
       final taskStateNotifier =
           await ref.read(asyncTaskStateNotifierProvider.future);
@@ -176,11 +188,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         success = await taskStateNotifier.deleteTask(task.id!);
       }
 
-      if (success && mounted) {
-        ErrorHandler.showSuccessSnackBar(
-            context, AppStrings.taskDeletedSuccess);
-      } else if (mounted) {
-        ErrorHandler.showErrorSnackBar(context, AppStrings.errorDeletingTask);
+      // If deletion failed, show error (optimistic UI already showed success)
+      if (!success && mounted) {
+        ErrorHandler.showErrorSnackBar(context, 'Failed to delete task. Please try again.');
       }
     } catch (e) {
       ErrorHandler.logError(e,
@@ -519,21 +529,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingS),
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingM),
-              itemCount: tasks.length,
-              itemBuilder: (context, index) {
-                final task = tasks[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: AppTheme.spacingM),
-                  decoration: BoxDecoration(
-                    color: _getTaskBackgroundColor(task),
-                    borderRadius:
-                        BorderRadius.circular(AppTheme.containerBorderRadius),
-                  ),
-                  child: _buildTaskTile(task),
-                );
-              },
+            child: PaginatedTaskList(
+              tasks: tasks,
+              itemsPerPage: 15, // Show 15 tasks per page
+              taskBuilder: (task) => Container(
+                margin: const EdgeInsets.only(bottom: AppTheme.spacingM),
+                decoration: BoxDecoration(
+                  color: _getTaskBackgroundColor(task),
+                  borderRadius:
+                      BorderRadius.circular(AppTheme.containerBorderRadius),
+                ),
+                child: _buildTaskTile(task),
+              ),
+              emptyState: _buildEmptyState(true),
             ),
           );
         } else {
@@ -544,25 +552,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             return _buildEmptyState(isRoutineTab);
           }
 
-          // Group tasks by date
+          // Group tasks by date and use pagination for better performance
           final groupedTasks = _groupTasksByDate(everydayTasks);
-          final sortedDates = groupedTasks.keys.toList()
-            ..sort((a, b) => b.compareTo(a));
 
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingM),
-            itemCount: sortedDates.length,
-            itemBuilder: (context, index) {
-              final date = sortedDates[index];
-              final tasks = groupedTasks[date]!;
-              return _buildTaskContainer(date, tasks);
-            },
+          return PaginatedTaskContainerList(
+            groupedTasks: groupedTasks,
+            containerBuilder: _buildTaskContainer,
+            containersPerPage: 5, // Show 5 date containers per page
+            emptyState: _buildEmptyState(false),
           );
         }
       },
-      loading: () => const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.greyPrimary),
+      loading: () => ListView.builder(
+        padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingM),
+        itemCount: 3,
+        itemBuilder: (context, index) => ShimmerLoading(
+          isLoading: true,
+          child: const ShimmerTaskContainer(),
         ),
       ),
       error: (error, _) => Center(
@@ -627,11 +633,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           ),
           const SizedBox(height: AppTheme.spacingS),
           Text(
-            'Tap the + button to add your first task',
+            isRoutineTab 
+                ? 'Create routine tasks that repeat daily to build consistent habits'
+                : 'Add tasks to organize your day and stay productive',
             style: AppTheme.bodyMedium.copyWith(
               color: AppTheme.secondaryText,
             ),
             textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppTheme.spacingL),
+          ElevatedButton.icon(
+            onPressed: _onAddTask,
+            icon: const Icon(Icons.add, size: 20),
+            label: Text(isRoutineTab ? 'Add Routine Task' : 'Add Task'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.greyPrimary,
+              foregroundColor: AppTheme.primaryText,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.spacingL,
+                vertical: AppTheme.spacingM,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.buttonBorderRadius),
+              ),
+            ),
           ),
         ],
       ),

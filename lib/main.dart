@@ -6,8 +6,7 @@ import 'package:device_preview/device_preview.dart';
 import 'utils/theme.dart';
 import 'utils/constants.dart';
 import 'utils/error_handler.dart';
-import 'screens/welcome_screen.dart';
-import 'screens/main_navigation_screen.dart';
+import 'utils/routes.dart';
 import 'widgets/app_icon.dart';
 import 'providers/providers.dart';
 import 'providers/provider_observer.dart';
@@ -63,17 +62,9 @@ class TaskManagerApp extends StatelessWidget {
 
       // Navigation Configuration
       home: const AppInitializer(),
-      routes: {
-        '/welcome': (context) => const WelcomeScreen(),
-        '/main': (context) => const MainNavigationScreen(),
-      },
-
-      // Default route for undefined routes
-      onUnknownRoute: (settings) {
-        return MaterialPageRoute(
-          builder: (context) => const WelcomeScreen(),
-        );
-      },
+      routes: AppRoutes.getRoutes(),
+      onGenerateRoute: AppRoutes.generateRoute,
+      onUnknownRoute: AppRoutes.onUnknownRoute,
 
       // Device Preview configuration
       locale: DevicePreview.locale(context),
@@ -186,7 +177,7 @@ class _AppInitializerState extends ConsumerState<AppInitializer>
       final notificationService = ref.read(notificationServiceProvider);
       await notificationService.initialize();
 
-      // Request notification permissions
+      // Request notification permissions (basic only, no dialogs during app init)
       await notificationService.requestPermissions();
 
       // Perform automatic cleanup of old completed tasks in the background
@@ -202,10 +193,10 @@ class _AppInitializerState extends ConsumerState<AppInitializer>
       if (mounted) {
         if (hasUserName) {
           // User exists, navigate to main screen
-          Navigator.of(context).pushReplacementNamed('/main');
+          Navigator.of(context).pushReplacementNamed(AppRoutes.main);
         } else {
           // New user, navigate to welcome screen
-          Navigator.of(context).pushReplacementNamed('/welcome');
+          Navigator.of(context).pushReplacementNamed(AppRoutes.welcome);
         }
       }
     } catch (e) {
@@ -216,7 +207,7 @@ class _AppInitializerState extends ConsumerState<AppInitializer>
       // This ensures the app doesn't get stuck on the loading screen
       if (mounted) {
         try {
-          Navigator.of(context).pushReplacementNamed('/welcome');
+          Navigator.of(context).pushReplacementNamed(AppRoutes.welcome);
         } catch (navigationError) {
           ErrorHandler.logError(navigationError,
               context: 'Navigation fallback', type: ErrorType.unknown);

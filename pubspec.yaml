@@ -130,7 +130,7 @@ flutter:
   # Sour Gummy Font Family
   # A playful, rounded font that enhances the user experience
   # Download from: https://fonts.google.com/specimen/Sour+Gummy
-  # fonts:
-    # - family: SourGummy              # Font family name used in TextStyle(fontFamily: 'SourGummy')
-    #   fonts:
-    #     - asset: assets/fonts/SourGummy-Regular.ttf  # Regular weight font file
+  fonts:
+    - family: SourGummy              # Font family name used in TextStyle(fontFamily: 'SourGummy')
+      fonts:
+        - asset: assets/fonts/SourGummy-Regular.ttf  # Regular weight font file
