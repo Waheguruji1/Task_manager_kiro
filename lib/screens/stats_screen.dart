@@ -4,14 +4,13 @@ import '../utils/theme.dart';
 import '../utils/responsive.dart';
 import '../providers/providers.dart';
 import '../models/task.dart';
-import '../widgets/heatmap_widget.dart';
-import '../widgets/simple_month_selector.dart';
+import '../widgets/monthly_bar_chart.dart';
 import '../services/data_cleanup_service.dart';
 
 /// Stats Screen Widget - Redesigned with focused data display
 ///
 /// Shows only essential statistics: weekly completed tasks, today's tasks,
-/// completion percentage with modern progress bar, and monthly heatmap
+/// completion percentage with modern progress bar, and monthly bar chart
 class StatsScreen extends ConsumerStatefulWidget {
   const StatsScreen({super.key});
 
@@ -21,23 +20,27 @@ class StatsScreen extends ConsumerStatefulWidget {
 
 class _StatsScreenState extends ConsumerState<StatsScreen> {
   int _selectedMonth = DateTime.now().month;
-  // Month selector state (for future use)
-  // int _selectedMonth = DateTime.now().month;
-  // final int _selectedYear = DateTime.now().year;
 
 
 
-  /// Calculate focused statistics
+  /// Calculate focused statistics for current year only
   Map<String, dynamic> _calculateFocusedStats(List<Task> allTasks) {
     final now = DateTime.now();
+    final currentYear = now.year;
     final today = DateTime(now.year, now.month, now.day);
     final thisWeekStart = today.subtract(Duration(days: today.weekday - 1));
 
+    // Filter tasks to current year only
+    final currentYearTasks = allTasks.where((task) {
+      return task.createdAt.year == currentYear;
+    }).toList();
+
     // Debug: Print task count
     debugPrint('Total tasks in database: ${allTasks.length}');
+    debugPrint('Current year tasks: ${currentYearTasks.length}');
 
     // Today's tasks - be more inclusive to show data
-    final todayTasks = allTasks.where((task) {
+    final todayTasks = currentYearTasks.where((task) {
       final taskDate = DateTime(
         task.createdAt.year,
         task.createdAt.month,
@@ -45,7 +48,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
       );
       // Include tasks created today, or if no tasks today, include recent tasks
       return taskDate.isAtSameMomentAs(today) ||
-          (allTasks.isEmpty && task.isRoutine) ||
+          (currentYearTasks.isEmpty && task.isRoutine) ||
           taskDate.isAfter(today.subtract(const Duration(
               days: 7))); // Show tasks from last week if no today tasks
     }).toList();
@@ -53,8 +56,8 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     final todayCompleted = todayTasks.where((task) => task.isCompleted).length;
     final todayUncompleted = todayTasks.length - todayCompleted;
 
-    // This week's completed tasks (more flexible completion date handling)
-    final weeklyCompleted = allTasks.where((task) {
+    // This week's completed tasks (more flexible completion date handling) - current year only
+    final weeklyCompleted = currentYearTasks.where((task) {
       if (!task.isCompleted) return false;
 
       // Use completedAt if available, otherwise use createdAt for completed tasks
@@ -70,9 +73,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           completedDate.isBefore(today.add(const Duration(days: 1)));
     }).length;
 
-    // Overall completion percentage
-    final totalTasks = allTasks.length;
-    final completedTasks = allTasks.where((task) => task.isCompleted).length;
+    // Overall completion percentage - current year only
+    final totalTasks = currentYearTasks.length;
+    final completedTasks = currentYearTasks.where((task) => task.isCompleted).length;
     final completionPercentage =
         totalTasks > 0 ? (completedTasks / totalTasks * 100) : 0.0;
 
@@ -437,8 +440,14 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     );
   }
 
-  /// Build activity heatmap with enhanced design
-  Widget _buildActivityHeatmap(List<Task> allTasks) {
+  /// Build monthly bar chart with enhanced design and current year filtering
+  Widget _buildMonthlyBarChart(List<Task> allTasks) {
+    // Filter tasks to current year only
+    final currentYear = DateTime.now().year;
+    final currentYearTasks = allTasks.where((task) {
+      return task.createdAt.year == currentYear;
+    }).toList();
+
     return Container(
       padding: const EdgeInsets.all(AppTheme.spacingL),
       decoration: BoxDecoration(
@@ -461,7 +470,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
-                  Icons.calendar_view_month,
+                  Icons.bar_chart,
                   color: AppTheme.greyPrimary,
                   size: 20,
                 ),
@@ -472,14 +481,14 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Activity Heatmap',
+                      'Monthly Statistics ($currentYear)',
                       style: AppTheme.headingMedium.copyWith(
                         fontWeight: FontWeight.w600,
                         color: AppTheme.primaryText,
                       ),
                     ),
                     Text(
-                      'Tap on any day to see details',
+                      'Tap on any month to see details',
                       style: AppTheme.caption.copyWith(
                         color: AppTheme.secondaryText,
                       ),
@@ -491,184 +500,61 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           ),
           const SizedBox(height: AppTheme.spacingL),
 
-          // Improved Heatmap widget with better UI
-          Consumer(
-            builder: (context, ref, child) {
-              final heatmapDataAsync = ref.watch(completionHeatmapDataProvider);
-
-              return heatmapDataAsync.when(
-                data: (heatmapData) {
-                  return Container(
-                    padding: const EdgeInsets.all(AppTheme.spacingM),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surfaceGrey,
-                      borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
-                      border: Border.all(
-                        color: AppTheme.greyPrimary.withValues(alpha: 0.2),
-                        width: 1,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_view_month,
-                              color: AppTheme.greyPrimary,
-                              size: 20,
-                            ),
-                            const SizedBox(width: AppTheme.spacingS),
-                            Text(
-                              'Task Completion Activity',
-                              style: AppTheme.bodyLarge.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.primaryText,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppTheme.spacingM),
-                        
-                        // Improved Heatmap
-                        HeatmapWidget(
-                          data: heatmapData,
-                          baseColor: AppTheme.greyPrimary,
-                          title: '',
-                          cellSize: 12.0,
-                          spacing: 3.0,
-                          onCellTap: (date, value) {
-                            _showDateTaskDetails(context, date, value as int?, allTasks);
-                          },
-                          tooltipBuilder: (date, value) {
-                            final count = value as int? ?? 0;
-                            return Container(
-                              padding: const EdgeInsets.all(AppTheme.spacingS),
-                              decoration: BoxDecoration(
-                                color: AppTheme.backgroundDark,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: AppTheme.greyPrimary.withValues(alpha: 0.3),
-                                ),
-                              ),
-                              child: Text(
-                                '${date.day}/${date.month}/${date.year}\n$count tasks completed',
-                                style: AppTheme.caption.copyWith(
-                                  color: AppTheme.primaryText,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            );
-                          },
-                        ),
-                        
-                        const SizedBox(height: AppTheme.spacingS),
-                        
-                        // Legend
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Less',
-                              style: AppTheme.caption.copyWith(
-                                color: AppTheme.secondaryText,
-                              ),
-                            ),
-                            const SizedBox(width: AppTheme.spacingS),
-                            ...List.generate(5, (index) {
-                              return Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 1),
-                                width: 10,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.greyPrimary.withValues(
-                                    alpha: (index + 1) * 0.2,
-                                  ),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              );
-                            }),
-                            const SizedBox(width: AppTheme.spacingS),
-                            Text(
-                              'More',
-                              style: AppTheme.caption.copyWith(
-                                color: AppTheme.secondaryText,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                loading: () => Container(
+          // Monthly Bar Chart for current year data with error handling
+          Builder(
+            builder: (context) {
+              try {
+                return MonthlyBarChart(
+                  tasks: currentYearTasks,
+                  selectedMonth: _selectedMonth,
+                  onMonthChanged: (month) {
+                    setState(() {
+                      _selectedMonth = month;
+                    });
+                  },
+                );
+              } catch (error) {
+                return Container(
                   height: 200,
+                  padding: const EdgeInsets.all(AppTheme.spacingL),
                   decoration: BoxDecoration(
-                    color: AppTheme.surfaceGrey,
+                    color: AppTheme.backgroundDark,
                     borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
-                  ),
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.greyPrimary),
+                    border: Border.all(
+                      color: Colors.red.withValues(alpha: 0.3),
+                      width: 1,
                     ),
                   ),
-                ),
-                error: (error, _) => Container(
-                  height: 120,
-                  padding: const EdgeInsets.all(AppTheme.spacingM),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceGrey,
-                    borderRadius: BorderRadius.circular(AppTheme.containerBorderRadius),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: Colors.red.shade400,
+                        size: 32,
+                      ),
+                      const SizedBox(height: AppTheme.spacingM),
+                      Text(
+                        'Failed to load chart',
+                        style: AppTheme.bodyLarge.copyWith(
+                          color: AppTheme.primaryText,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: AppTheme.spacingS),
+                      Text(
+                        'Please try refreshing the screen',
+                        style: AppTheme.bodyMedium.copyWith(
+                          color: AppTheme.secondaryText,
+                        ),
+                      ),
+                    ],
                   ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 32,
-                          color: Colors.red.shade400,
-                        ),
-                        const SizedBox(height: AppTheme.spacingS),
-                        Text(
-                          'Failed to load activity data',
-                          style: AppTheme.bodyMedium.copyWith(
-                            color: AppTheme.secondaryText,
-                          ),
-                        ),
-                        const SizedBox(height: AppTheme.spacingS),
-                        TextButton(
-                          onPressed: () {
-                            ref.invalidate(completionHeatmapDataProvider);
-                          },
-                          child: Text(
-                            'Retry',
-                            style: AppTheme.bodyMedium.copyWith(
-                              color: AppTheme.greyPrimary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
+                );
+              }
             },
           ),
-          
-          const SizedBox(height: AppTheme.spacingL),
-          
-          // Month selector for current year
-          SimpleMonthSelector(
-            selectedMonth: _selectedMonth,
-            onMonthChanged: (month) {
-              setState(() {
-                _selectedMonth = month;
-              });
-            },
-            currentYear: DateTime.now().year,
-          ),
+
           
           const SizedBox(height: AppTheme.spacingL),
           
@@ -727,82 +613,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
       ),
     );
   }
-  /// Show task details for a specific date
-  void _showDateTaskDetails(BuildContext context, DateTime date,
-      int? completedCount, List<Task> allTasks) {
-    final tasksForDate = allTasks.where((task) {
-      if (!task.isCompleted || task.completedAt == null) return false;
-      final taskDate = DateTime(
-        task.completedAt!.year,
-        task.completedAt!.month,
-        task.completedAt!.day,
-      );
-      final selectedDate = DateTime(date.year, date.month, date.day);
-      return taskDate.isAtSameMomentAs(selectedDate);
-    }).toList();
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surfaceGrey,
-        title: Text(
-          'Tasks completed on ${date.day}/${date.month}/${date.year}',
-          style: AppTheme.headingMedium.copyWith(
-            color: AppTheme.primaryText,
-          ),
-        ),
-        content: tasksForDate.isEmpty
-            ? Text(
-                'No tasks completed on this date',
-                style: AppTheme.bodyMedium.copyWith(
-                  color: AppTheme.secondaryText,
-                ),
-              )
-            : SizedBox(
-                width: double.maxFinite,
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: tasksForDate.length,
-                  itemBuilder: (context, index) {
-                    final task = tasksForDate[index];
-                    return ListTile(
-                      leading: Icon(
-                        Icons.check_circle,
-                        color: AppTheme.greyPrimary,
-                        size: 20,
-                      ),
-                      title: Text(
-                        task.title,
-                        style: AppTheme.bodyMedium.copyWith(
-                          color: AppTheme.primaryText,
-                        ),
-                      ),
-                      subtitle: task.isRoutine
-                          ? Text(
-                              'Routine Task',
-                              style: AppTheme.caption.copyWith(
-                                color: AppTheme.greyPrimary,
-                              ),
-                            )
-                          : null,
-                    );
-                  },
-                ),
-              ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'Close',
-              style: AppTheme.bodyMedium.copyWith(
-                color: AppTheme.greyPrimary,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Future<void> _cleanupOldData() async {
     try {
@@ -847,7 +658,6 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
         
         // Refresh providers
         ref.invalidate(allTasksProvider);
-        ref.invalidate(completionHeatmapDataProvider);
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -880,10 +690,10 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Watch the task change notifier to ensure stats update when tasks change
-    ref.watch(taskChangeNotifierProvider);
-
-    // Watch the task state notifier for real-time updates
+    // Use auto-refresh stats provider for seamless updates
+    final autoRefreshStatsAsync = ref.watch(autoRefreshStatsProvider);
+    
+    // Watch the task state notifier for real-time updates as fallback
     final taskStateAsync = ref.watch(asyncTaskStateNotifierProvider);
     final responsivePadding = ResponsiveUtils.getOptimalMobilePadding(context);
 
@@ -921,18 +731,27 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   ),
                 ),
 
-                // Stats Content
-                taskStateAsync.when(
-                  data: (taskStateNotifier) {
-                    final taskState = taskStateNotifier.currentState;
-                    final tasks = [
-                      ...taskState.everydayTasks,
-                      ...taskState.routineTasks
-                    ];
+                // Stats Content - Use auto-refresh provider for seamless updates
+                autoRefreshStatsAsync.when(
+                  data: (autoRefreshData) {
+                    // Auto-refresh data is available, now get task data for UI display
+                    return taskStateAsync.when(
+                      data: (taskStateNotifier) {
+                        final taskState = taskStateNotifier.currentState;
+                        final tasks = [
+                          ...taskState.everydayTasks,
+                          ...taskState.routineTasks
+                        ];
 
-                    // Use actual tasks, don't generate sample data
-                    final effectiveTasks = tasks;
-                    final stats = _calculateFocusedStats(effectiveTasks);
+                        // Filter to current year only for display
+                        final currentYear = DateTime.now().year;
+                        final currentYearTasks = tasks.where((task) {
+                          return task.createdAt.year == currentYear;
+                        }).toList();
+
+                        // Use current year tasks for stats calculation
+                        final effectiveTasks = currentYearTasks;
+                        final stats = _calculateFocusedStats(tasks); // Pass all tasks for proper calculation
 
                     return Column(
                       children: [
@@ -1086,17 +905,62 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
 
                         const SizedBox(height: AppTheme.spacingXL),
 
-                        // Heatmap Section
+                        // Monthly Bar Chart Section
                         Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppTheme.spacingS,
                           ),
-                          child: _buildActivityHeatmap(effectiveTasks),
+                          child: _buildMonthlyBarChart(effectiveTasks),
                         ),
 
                         const SizedBox(height: AppTheme.spacingXL),
                         ],
                       ],
+                    );
+                      },
+                      loading: () => const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(AppTheme.spacingXL),
+                          child: CircularProgressIndicator(
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(AppTheme.greyPrimary),
+                          ),
+                        ),
+                      ),
+                      error: (error, _) => Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppTheme.spacingXL),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                size: 48,
+                                color: Colors.red.shade400,
+                              ),
+                              const SizedBox(height: AppTheme.spacingM),
+                              Text(
+                                'Failed to load task data',
+                                style: AppTheme.bodyLarge.copyWith(
+                                  color: AppTheme.secondaryText,
+                                ),
+                              ),
+                              const SizedBox(height: AppTheme.spacingM),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  ref.invalidate(autoRefreshStatsProvider);
+                                  ref.invalidate(asyncTaskStateNotifierProvider);
+                                },
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Retry'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.greyPrimary,
+                                  foregroundColor: AppTheme.primaryText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     );
                   },
                   loading: () => const Center(
@@ -1128,7 +992,8 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                           const SizedBox(height: AppTheme.spacingM),
                           ElevatedButton.icon(
                             onPressed: () {
-                              ref.invalidate(allTasksProvider);
+                              ref.invalidate(autoRefreshStatsProvider);
+                              ref.invalidate(asyncTaskStateNotifierProvider);
                             },
                             icon: const Icon(Icons.refresh),
                             label: const Text('Retry'),

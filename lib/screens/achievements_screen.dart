@@ -25,17 +25,19 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
       ),
       body: Consumer(
         builder: (context, ref, child) {
-          final achievementsAsync = ref.watch(allAchievementsProvider);
-          
-          // Debug logging
-          print('Achievements screen: watching allAchievementsProvider');
+          // Use auto-refresh achievements provider for seamless updates
+          final achievementsAsync = ref.watch(autoRefreshAchievementsProvider);
           
           return achievementsAsync.when(
             data: (achievements) {
               return RefreshIndicator(
                 onRefresh: () async {
-                  ref.invalidate(allAchievementsProvider);
-                  await ref.read(allAchievementsProvider.future);
+                  // Force refresh using navigation notifier for seamless updates
+                  final navigationNotifier = ref.read(screenNavigationNotifierProvider.notifier);
+                  navigationNotifier.navigateToAchievements();
+                  
+                  // Wait for the auto-refresh provider to complete
+                  await ref.read(autoRefreshAchievementsProvider.future);
                 },
                 color: AppTheme.greyPrimary,
                 backgroundColor: AppTheme.surfaceGrey,
@@ -80,7 +82,9 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                     const SizedBox(height: AppTheme.spacingM),
                     ElevatedButton(
                       onPressed: () {
-                        ref.invalidate(allAchievementsProvider);
+                        // Force refresh using navigation notifier
+                        final navigationNotifier = ref.read(screenNavigationNotifierProvider.notifier);
+                        navigationNotifier.navigateToAchievements();
                       },
                       child: const Text('Retry'),
                     ),

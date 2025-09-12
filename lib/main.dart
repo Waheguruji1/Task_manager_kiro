@@ -175,7 +175,7 @@ class _AppInitializerState extends ConsumerState<AppInitializer>
 
       // Initialize notification service
       final notificationService = ref.read(notificationServiceProvider);
-      await notificationService.initialize();
+      await notificationService.initialize(context: mounted ? context : null);
 
       // Request notification permissions (basic only, no dialogs during app init)
       await notificationService.requestPermissions();
@@ -183,6 +183,10 @@ class _AppInitializerState extends ConsumerState<AppInitializer>
       // Perform automatic cleanup of old completed tasks in the background
       // This runs asynchronously and doesn't block app initialization
       _performBackgroundCleanup();
+
+      // Perform yearly data cleanup in the background
+      // This runs asynchronously and doesn't block app initialization
+      _performYearlyCleanup();
 
       // Check if user has already entered their name using provider
       final hasUserName = await ref.read(hasUserNameProvider.future);
@@ -251,6 +255,45 @@ class _AppInitializerState extends ConsumerState<AppInitializer>
         ErrorHandler.logError(
           e,
           context: 'Background task cleanup',
+          type: ErrorType.database,
+        );
+      }
+    });
+  }
+
+  /// Perform yearly data cleanup in the background
+  ///
+  /// This method runs asynchronously during app startup to clean up
+  /// previous year's statistics and achievement progress without blocking
+  /// the user interface. It preserves task data as per requirements.
+  void _performYearlyCleanup() {
+    // Run yearly cleanup in background without awaiting to avoid blocking UI
+    Future.microtask(() async {
+      try {
+        ErrorHandler.logInfo(
+          'Starting yearly data cleanup process',
+          context: 'App initialization',
+        );
+
+        // Trigger yearly cleanup using the provider
+        final yearlyCleanupResult = await ref.read(performYearlyCleanupProvider.future);
+
+        if (yearlyCleanupResult) {
+          ErrorHandler.logInfo(
+            'Yearly data cleanup completed successfully',
+            context: 'App initialization',
+          );
+        } else {
+          ErrorHandler.logInfo(
+            'Yearly data cleanup not needed or failed',
+            context: 'App initialization',
+          );
+        }
+      } catch (e) {
+        // Log cleanup errors but don't let them affect app initialization
+        ErrorHandler.logError(
+          e,
+          context: 'Yearly data cleanup',
           type: ErrorType.database,
         );
       }

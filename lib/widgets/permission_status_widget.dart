@@ -131,6 +131,7 @@ class DetailedPermissionStatusWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notificationService = ref.read(notificationServiceProvider);
+    notificationService.setContext(context);
     
     return FutureBuilder<Map<String, dynamic>>(
       future: notificationService.getComprehensivePermissionStatus(),

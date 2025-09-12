@@ -145,6 +145,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final prefsService =
           await ref.read(asyncPreferencesServiceProvider.future);
       final notificationService = ref.read(notificationServiceProvider);
+      notificationService.setContext(context);
 
       if (enabled) {
         // Request all permissions with comprehensive flow
@@ -220,6 +221,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _handleRequestPermission() async {
     try {
       final notificationService = ref.read(notificationServiceProvider);
+      notificationService.setContext(context);
       
       // Use the new comprehensive permission request
       final result = await notificationService.requestAllPermissions(
@@ -302,6 +304,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     try {
       final notificationService = ref.read(notificationServiceProvider);
+      notificationService.setContext(context);
       final success = await notificationService.sendTestNotification();
 
       if (mounted) {
@@ -337,6 +340,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _handleSendScheduledTestNotification() async {
     try {
       final notificationService = ref.read(notificationServiceProvider);
+      notificationService.setContext(context);
       final notificationId = await notificationService
           .sendScheduledTestNotification(delayMinutes: 1);
 
@@ -443,6 +447,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     try {
       final notificationService = ref.read(notificationServiceProvider);
+      notificationService.setContext(context);
       final serviceStatus = await notificationService.getServiceStatus();
       final platformCompatibility =
           await notificationService.detectPlatformCompatibility();
@@ -1021,20 +1026,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       const SizedBox(height: AppTheme.spacingS),
                       userNameAsync.when(
-                        data: (userName) => Text(
-                          'Welcome, ${userName ?? 'User'}!',
-                          style: AppTheme.bodyLarge.copyWith(
-                            color: AppTheme.secondaryText,
-                          ),
-                        ),
+                        data: (userName) {
+                          final displayName = (userName != null && userName.trim().isNotEmpty) 
+                              ? userName.trim() 
+                              : 'there';
+                          return Text(
+                            'Welcome, $displayName!',
+                            style: AppTheme.bodyLarge.copyWith(
+                              color: AppTheme.secondaryText,
+                            ),
+                          );
+                        },
                         loading: () => Text(
-                          'Welcome, User!',
+                          'Welcome, there!',
                           style: AppTheme.bodyLarge.copyWith(
                             color: AppTheme.secondaryText,
                           ),
                         ),
                         error: (_, __) => Text(
-                          'Welcome, User!',
+                          'Welcome, there!',
                           style: AppTheme.bodyLarge.copyWith(
                             color: AppTheme.secondaryText,
                           ),

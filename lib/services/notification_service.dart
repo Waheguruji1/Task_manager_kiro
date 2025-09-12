@@ -5,6 +5,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import '../models/task.dart';
+import '../widgets/notification_debug_snackbar.dart';
 import 'permission_service.dart';
 
 /// Notification permission status enum
@@ -121,10 +122,23 @@ class TimezoneManager {
   }
   
   /// Log timezone-related errors
-  static void _logTimezoneError(String message, dynamic error, StackTrace? stackTrace) {
-    debugPrint('TimezoneManager Error: $message - $error');
+  static void _logTimezoneError(String message, dynamic error, StackTrace? stackTrace, [BuildContext? context]) {
+    final errorMessage = 'TimezoneManager Error: $message - $error';
+    debugPrint(errorMessage);
     if (stackTrace != null) {
       debugPrint('Stack trace: $stackTrace');
+    }
+    
+    // Show snackbar if context is available
+    if (context != null && context.mounted) {
+      NotificationDebugSnackbar.showTimezoneError(
+        context,
+        'Timezone error: $message',
+        () {
+          // Retry timezone initialization
+          TimezoneManager.attemptRecovery();
+        },
+      );
     }
   }
 }
@@ -314,12 +328,24 @@ class NotificationService {
   final Random _random = Random();
   PlatformCompatibility? _platformCompatibility;
   final PermissionService _permissionService = PermissionService();
+  BuildContext? _context;
+
+  /// Set the context for showing snackbar notifications
+  void setContext(BuildContext context) {
+    _context = context;
+  }
+
+  /// Helper method to get the active context for snackbars
+  BuildContext? _getActiveContext(BuildContext? context) {
+    final activeContext = context ?? _context;
+    return (activeContext != null && activeContext.mounted) ? activeContext : null;
+  }
 
   /// Initialize the notification service with enhanced setup and retry logic
   /// 
   /// Sets up platform-specific notification settings and requests permissions
   /// Must be called before using any other notification methods
-  Future<void> initialize({int maxRetries = 3}) async {
+  Future<void> initialize({int maxRetries = 3, BuildContext? context}) async {
     if (_isInitialized) return;
 
     int retryCount = 0;
@@ -327,7 +353,12 @@ class NotificationService {
 
     while (retryCount < maxRetries && !_isInitialized) {
       try {
-        debugPrint('Initializing notification service (attempt ${retryCount + 1}/$maxRetries)...');
+        final initMessage = 'Initializing notification service (attempt ${retryCount + 1}/$maxRetries)...';
+        debugPrint(initMessage);
+        final activeContext = _getActiveContext(context);
+        if (activeContext != null) {
+          NotificationDebugSnackbar.showInfo(activeContext, 'Initializing notifications...');
+        }
         
         // Reset status flags for retry
         _channelsCreated = false;
@@ -337,7 +368,11 @@ class NotificationService {
         debugPrint('Step 1: Initializing timezone data...');
         _timezoneInitialized = await TimezoneManager.initializeTimezones();
         if (!_timezoneInitialized) {
-          debugPrint('Warning: Timezone initialization failed, will attempt recovery later');
+          const warningMessage = 'Warning: Timezone initialization failed, will attempt recovery later';
+          debugPrint(warningMessage);
+          if (_context != null && _context!.mounted) {
+            NotificationDebugSnackbar.showWarning(_context!, 'Timezone initialization failed, will retry');
+          }
         }
 
         // Step 2: Initialize Flutter Local Notifications Plugin
@@ -401,7 +436,11 @@ class NotificationService {
           'retryCount': retryCount,
         });
         
-        debugPrint('Notification service initialized successfully');
+        const successMessage = 'Notification service initialized successfully';
+        debugPrint(successMessage);
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showInitializationSuccess(_context!);
+        }
         break;
 
       } catch (e, stackTrace) {
@@ -414,7 +453,11 @@ class NotificationService {
         });
 
         if (retryCount < maxRetries) {
-          debugPrint('Initialization failed, retrying in ${retryCount * 1000}ms...');
+          final retryMessage = 'Initialization failed, retrying in ${retryCount * 1000}ms...';
+          debugPrint(retryMessage);
+          if (_context != null && _context!.mounted) {
+            NotificationDebugSnackbar.showWarning(_context!, 'Initialization failed, retrying...');
+          }
           await Future.delayed(Duration(milliseconds: retryCount * 1000));
         }
       }
@@ -449,9 +492,16 @@ class NotificationService {
 
     // Log verification results
     if (issues.isNotEmpty) {
-      debugPrint('Initialization verification found issues: ${issues.join(', ')}');
+      final issuesMessage = 'Initialization verification found issues: ${issues.join(', ')}';
+      debugPrint(issuesMessage);
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showWarning(_context!, 'Notification setup has issues: ${issues.join(', ')}');
+      }
     } else {
       debugPrint('Initialization verification passed');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showInfo(_context!, 'Notification verification passed');
+      }
     }
   }
 
@@ -478,7 +528,11 @@ class NotificationService {
               AndroidFlutterLocalNotificationsPlugin>();
       
       if (androidImplementation == null) {
-        debugPrint('Android implementation not available for notification channels');
+        const errorMessage = 'Android implementation not available for notification channels';
+        debugPrint(errorMessage);
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showError(_context!, 'Android notification channels unavailable');
+        }
         return;
       }
       
@@ -521,7 +575,11 @@ class NotificationService {
     
     final channelsExist = await _verifyNotificationChannels();
     if (!channelsExist) {
-      debugPrint('Notification channels missing, recreating...');
+      const recreateMessage = 'Notification channels missing, recreating...';
+      debugPrint(recreateMessage);
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showWarning(_context!, 'Recreating notification channels...');
+      }
       await _createAndroidNotificationChannels();
     }
   }
@@ -640,7 +698,11 @@ class NotificationService {
         final result = await iosImplementation.checkPermissions();
         return result?.isEnabled ?? false;
       } catch (e) {
-        debugPrint('iOS permission check failed: $e');
+        final errorMessage = 'iOS permission check failed: $e';
+        debugPrint(errorMessage);
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showError(_context!, 'iOS permission check failed');
+        }
         return false;
       }
     }
@@ -668,7 +730,11 @@ class NotificationService {
       final bool? canSchedule = await androidImplementation.canScheduleExactNotifications();
       return canSchedule ?? false;
     } catch (e) {
-      debugPrint('Error checking exact alarm permission: $e');
+      final errorMessage = 'Error checking exact alarm permission: $e';
+      debugPrint(errorMessage);
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showError(_context!, 'Cannot check exact alarm permission');
+      }
       return false;
     }
   }
@@ -697,7 +763,11 @@ class NotificationService {
       await Future.delayed(const Duration(milliseconds: 500));
       return await canScheduleExactAlarms();
     } catch (e) {
-      debugPrint('Error requesting exact alarm permission: $e');
+      final errorMessage = 'Error requesting exact alarm permission: $e';
+      debugPrint(errorMessage);
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showError(_context!, 'Failed to request exact alarm permission');
+      }
       return false;
     }
   }
@@ -777,6 +847,7 @@ class NotificationService {
   /// Schedule a notification for a task with enhanced error handling and verification
   /// 
   /// [task] - The task to schedule notification for
+  /// [context] - Optional context for showing snackbar messages
   /// Returns the notification ID that was assigned, or null if scheduling failed
   /// 
   /// The notification will be scheduled for the task's notificationTime
@@ -787,7 +858,7 @@ class NotificationService {
   /// - Verification that notifications were actually scheduled
   /// - Proper error handling for scheduling failures
   /// - Support for exactAllowWhileIdle with permission handling
-  Future<int?> scheduleTaskNotification(Task task) async {
+  Future<int?> scheduleTaskNotification(Task task, {BuildContext? context}) async {
     if (!_isInitialized) {
       await initialize();
     }
@@ -807,6 +878,10 @@ class NotificationService {
     // Don't schedule notifications for past times
     if (task.notificationTime!.isBefore(DateTime.now())) {
       debugPrint('Task ${task.id} notification time is in the past, skipping scheduling');
+      final activeContext = _getActiveContext(context);
+      if (activeContext != null) {
+        NotificationDebugSnackbar.showWarning(activeContext, 'Cannot schedule reminder for past time');
+      }
       return null;
     }
 
@@ -818,6 +893,9 @@ class NotificationService {
     final serviceStatus = await getServiceStatus();
     if (!serviceStatus.isHealthy) {
       debugPrint('Service is not healthy, attempting recovery before scheduling');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showWarning(_context!, 'Notification service needs recovery, attempting fix...');
+      }
       await attemptServiceRecovery();
       
       // Check again after recovery
@@ -849,6 +927,16 @@ class NotificationService {
     final permissionsEnabled = await areNotificationsEnabled();
     if (!permissionsEnabled) {
       debugPrint('Notification permissions not granted, cannot schedule notification');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showPermissionError(
+          _context!,
+          'Notification permissions required to set reminders',
+          () {
+            // Open settings - this would need to be implemented
+            requestPermissions();
+          },
+        );
+      }
       return null;
     }
 
@@ -861,6 +949,9 @@ class NotificationService {
       
       if (scheduledDate == null) {
         debugPrint('Failed to convert DateTime to TZDateTime for notification scheduling');
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showError(_context!, 'Failed to schedule reminder due to timezone issue');
+        }
         // Attempt timezone recovery
         if (await TimezoneManager.attemptRecovery()) {
           final tz.TZDateTime? retryScheduledDate = _convertToTZDateTime(task.notificationTime!);
@@ -900,6 +991,9 @@ class NotificationService {
         });
         
         debugPrint('Successfully scheduled and verified notification $result for task ${task.id}');
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showSchedulingSuccess(_context!, task.title, task.notificationTime!);
+        }
       }
       
       return result;
@@ -937,11 +1031,17 @@ class NotificationService {
             } else {
               scheduleMode = AndroidScheduleMode.inexact;
               debugPrint('Exact alarms not permitted, using inexact scheduling for notification $notificationId');
+              if (_context != null && _context!.mounted) {
+                NotificationDebugSnackbar.showWarning(_context!, 'Using approximate timing for reminder (exact alarms not permitted)');
+              }
             }
           }
         } catch (e) {
           // Fallback to inexact mode if permission check fails
           debugPrint('Permission check failed, falling back to inexact mode: $e');
+          if (_context != null && _context!.mounted) {
+            NotificationDebugSnackbar.showWarning(_context!, 'Using approximate timing for reminder');
+          }
           scheduleMode = AndroidScheduleMode.inexact;
         }
       }
@@ -963,6 +1063,9 @@ class NotificationService {
     } catch (e) {
       // If scheduling fails, try with the most basic inexact mode
       debugPrint('Initial scheduling failed, trying with basic inexact mode: $e');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showWarning(_context!, 'Retrying reminder with basic timing...');
+      }
       
       try {
         await _flutterLocalNotificationsPlugin.zonedSchedule(
@@ -978,6 +1081,9 @@ class NotificationService {
         );
         
         debugPrint('Notification $notificationId scheduled with basic inexact timing as fallback');
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showSuccess(_context!, 'Reminder set with basic timing');
+        }
         return notificationId;
       } catch (fallbackError, fallbackStackTrace) {
         _logError('notification_scheduling_fallback', fallbackError, fallbackStackTrace, context: {
@@ -1002,6 +1108,9 @@ class NotificationService {
       await _flutterLocalNotificationsPlugin.cancel(notificationId);
     } catch (e) {
       debugPrint('Error canceling notification: $e');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showError(_context!, 'Failed to cancel notification');
+      }
     }
   }
 
@@ -1018,6 +1127,9 @@ class NotificationService {
       await _flutterLocalNotificationsPlugin.cancelAll();
     } catch (e) {
       debugPrint('Error canceling all notifications: $e');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showError(_context!, 'Failed to cancel all notifications');
+      }
     }
   }
 
@@ -1063,6 +1175,9 @@ class NotificationService {
       );
     } catch (e) {
       debugPrint('Error showing completion notification: $e');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showError(_context!, 'Failed to show completion notification');
+      }
     }
   }
 
@@ -1150,6 +1265,9 @@ class NotificationService {
       return await _flutterLocalNotificationsPlugin.pendingNotificationRequests();
     } catch (e) {
       debugPrint('Error getting pending notifications: $e');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showError(_context!, 'Failed to get pending notifications');
+      }
       return [];
     }
   }
@@ -1199,6 +1317,9 @@ class NotificationService {
         break;
       default:
         debugPrint('No recovery action available for component: $component');
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showWarning(_context!, 'No recovery available for component: $component');
+        }
     }
   }
 
@@ -1206,6 +1327,9 @@ class NotificationService {
   Future<void> _attemptChannelRecovery() async {
     try {
       debugPrint('Attempting notification channel recovery...');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showInfo(_context!, 'Attempting to recover notification channels...');
+      }
       // Wait a bit and retry channel creation
       await Future.delayed(const Duration(seconds: 1));
       await _createAndroidNotificationChannels();
@@ -1213,8 +1337,14 @@ class NotificationService {
       if (await _verifyNotificationChannels()) {
         _channelsCreated = true;
         debugPrint('Channel recovery successful');
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showRecoverySuccess(_context!);
+        }
       } else {
         debugPrint('Channel recovery failed - channels still not available');
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showRecoveryFailure(_context!, 'Channels still not available');
+        }
       }
     } catch (e, stackTrace) {
       _logError('channel_recovery', e, stackTrace);
@@ -1225,13 +1355,22 @@ class NotificationService {
   Future<void> _attemptTimezoneRecovery() async {
     try {
       debugPrint('Attempting timezone recovery...');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showInfo(_context!, 'Attempting timezone recovery...');
+      }
       // Retry timezone initialization
       _timezoneInitialized = await TimezoneManager.attemptRecovery();
       
       if (_timezoneInitialized) {
         debugPrint('Timezone recovery successful');
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showRecoverySuccess(_context!);
+        }
       } else {
         debugPrint('Timezone recovery failed');
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showRecoveryFailure(_context!, 'Timezone recovery failed');
+        }
       }
     } catch (e, stackTrace) {
       _logError('timezone_recovery', e, stackTrace);
@@ -1242,6 +1381,9 @@ class NotificationService {
   Future<void> _attemptPermissionRecovery() async {
     try {
       debugPrint('Attempting permission recovery...');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showInfo(_context!, 'Checking notification permissions...');
+      }
       // Check current permission status
       final permissionStatus = await getDetailedPermissionStatus();
       debugPrint('Current permission status: $permissionStatus');
@@ -1250,6 +1392,13 @@ class NotificationService {
         // Try to request permissions again
         final granted = await requestPermissions();
         debugPrint('Permission recovery result: $granted');
+        if (_context != null && _context!.mounted) {
+          if (granted) {
+            NotificationDebugSnackbar.showSuccess(_context!, 'Notification permissions granted');
+          } else {
+            NotificationDebugSnackbar.showError(_context!, 'Notification permissions denied');
+          }
+        }
       }
     } catch (e, stackTrace) {
       _logError('permission_recovery', e, stackTrace);
@@ -1260,6 +1409,27 @@ class NotificationService {
   void _logSuccess(String operation, {Map<String, dynamic>? context}) {
     final contextStr = context != null ? ' - Context: $context' : '';
     debugPrint('NotificationService Success: $operation on ${Platform.operatingSystem}$contextStr');
+    
+    // Show success snackbar for important operations
+    if (_context != null && _context!.mounted) {
+      switch (operation) {
+        case 'initialization':
+          // Already handled in initialize method
+          break;
+        case 'service_recovery':
+          // Already handled in recovery method
+          break;
+        case 'channel_creation':
+          NotificationDebugSnackbar.showSuccess(_context!, 'Notification channels created');
+          break;
+        case 'test_notification':
+        case 'scheduled_test_notification':
+          // Already handled in test methods
+          break;
+        default:
+          NotificationDebugSnackbar.showSuccess(_context!, 'Operation successful: $operation');
+      }
+    }
   }
 
   /// Perform comprehensive health check of all service components
@@ -1304,14 +1474,23 @@ class NotificationService {
     // Log health check results
     if (errors.isNotEmpty) {
       debugPrint('NotificationService health check failed: ${errors.join(', ')}');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showError(_context!, 'Health check failed: ${errors.join(', ')}');
+      }
     }
     
     if (warnings.isNotEmpty) {
       debugPrint('NotificationService health check warnings: ${warnings.join(', ')}');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showWarning(_context!, 'Health check warnings: ${warnings.join(', ')}');
+      }
     }
     
     if (errors.isEmpty && warnings.isEmpty) {
       debugPrint('NotificationService health check passed');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showSuccess(_context!, 'Notification service health check passed');
+      }
     }
   }
 
@@ -1360,6 +1539,9 @@ class NotificationService {
   /// Attempt automatic service recovery
   Future<void> attemptServiceRecovery() async {
     debugPrint('Attempting notification service recovery...');
+    if (_context != null && _context!.mounted) {
+      NotificationDebugSnackbar.showInfo(_context!, 'Attempting service recovery...');
+    }
     
     try {
       // Re-initialize if not initialized
@@ -1385,9 +1567,15 @@ class NotificationService {
       if (status.isHealthy) {
         debugPrint('Service recovery successful');
         _logSuccess('service_recovery');
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showRecoverySuccess(_context!);
+        }
       } else {
         debugPrint('Service recovery partially successful - some issues remain');
         debugPrint(status.getStatusSummary());
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showWarning(_context!, 'Service recovery partially successful');
+        }
       }
     } catch (e, stackTrace) {
       _logError('service_recovery', e, stackTrace);
@@ -1409,6 +1597,9 @@ class NotificationService {
       return await requestPermissions();
     } catch (e) {
       debugPrint('Error requesting exact alarm permissions: $e');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showError(_context!, 'Failed to request exact alarm permissions');
+      }
       return false;
     }
   }
@@ -1434,6 +1625,9 @@ class NotificationService {
       final permissionsEnabled = await areNotificationsEnabled();
       if (!permissionsEnabled) {
         debugPrint('Test notification failed: permissions not granted');
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showTestFailure(_context!, 'Permissions not granted');
+        }
         return false;
       }
       
@@ -1454,6 +1648,9 @@ class NotificationService {
       });
       
       debugPrint('Test notification sent successfully');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showTestSuccess(_context!);
+      }
       return true;
     } catch (e, stackTrace) {
       _logError('test_notification', e, stackTrace);
@@ -1484,6 +1681,9 @@ class NotificationService {
       }
     } catch (e) {
       debugPrint('Error verifying notification delivery: $e');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showError(_context!, 'Failed to verify notification delivery');
+      }
       return false;
     }
   }
@@ -1506,13 +1706,16 @@ class NotificationService {
       }).toList();
     } catch (e) {
       debugPrint('Error getting detailed pending notifications: $e');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showError(_context!, 'Failed to get notification details');
+      }
       return [];
     }
   }
 
   /// Debug method to inspect the current state of the notification service
   /// 
-  /// Prints comprehensive information about the service state
+  /// Shows comprehensive information about the service state via snackbars
   /// Useful for troubleshooting notification issues
   Future<void> debugServiceState() async {
     debugPrint('=== Notification Service Debug Information ===');
@@ -1524,24 +1727,42 @@ class NotificationService {
       debugPrint('Timezone initialized: $_timezoneInitialized');
       debugPrint('Platform: ${Platform.operatingSystem}');
       
+      // Show basic state via snackbar
+      if (_context != null && _context!.mounted) {
+        final stateInfo = 'Service: ${_isInitialized ? "✓" : "✗"}, Channels: ${_channelsCreated ? "✓" : "✗"}, Timezone: ${_timezoneInitialized ? "✓" : "✗"}';
+        NotificationDebugSnackbar.showInfo(_context!, stateInfo);
+      }
+      
       // Timezone information
       debugPrint('Timezone manager initialized: ${TimezoneManager.isInitialized}');
       if (TimezoneManager.initializationError != null) {
         debugPrint('Timezone error: ${TimezoneManager.initializationError}');
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showError(_context!, 'Timezone error: ${TimezoneManager.initializationError}');
+        }
       }
       
       // Permission status
       final permissionStatus = await getDetailedPermissionStatus();
       debugPrint('Permission status: $permissionStatus');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showInfo(_context!, 'Permissions: $permissionStatus');
+      }
       
       // Service health
       final serviceStatus = await getServiceStatus();
       debugPrint('Service healthy: ${serviceStatus.isHealthy}');
       if (serviceStatus.errors.isNotEmpty) {
         debugPrint('Service errors: ${serviceStatus.errors}');
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showError(_context!, 'Errors: ${serviceStatus.errors.join(', ')}');
+        }
       }
       if (serviceStatus.warnings.isNotEmpty) {
         debugPrint('Service warnings: ${serviceStatus.warnings}');
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showWarning(_context!, 'Warnings: ${serviceStatus.warnings.join(', ')}');
+        }
       }
       
       // Pending notifications
@@ -1550,16 +1771,25 @@ class NotificationService {
       for (final notification in pendingNotifications) {
         debugPrint('  - ID: ${notification['id']}, Title: ${notification['title']}');
       }
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showInfo(_context!, 'Pending notifications: ${pendingNotifications.length}');
+      }
       
       // Platform-specific information
       if (Platform.isAndroid) {
         final canScheduleExact = await canScheduleExactAlarms();
         debugPrint('Can schedule exact alarms: $canScheduleExact');
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showInfo(_context!, 'Exact alarms: ${canScheduleExact ? "Available" : "Not available"}');
+        }
       }
       
     } catch (e, stackTrace) {
       debugPrint('Error during debug state inspection: $e');
       debugPrint('Stack trace: $stackTrace');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showError(_context!, 'Debug inspection failed: $e');
+      }
     }
     
     debugPrint('=== End Debug Information ===');
@@ -1582,6 +1812,9 @@ class NotificationService {
       final permissionsEnabled = await areNotificationsEnabled();
       if (!permissionsEnabled) {
         debugPrint('Scheduled test notification failed: permissions not granted');
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showTestFailure(_context!, 'Permissions not granted');
+        }
         return null;
       }
       
@@ -1591,6 +1824,9 @@ class NotificationService {
       
       if (tzScheduledTime == null) {
         debugPrint('Failed to convert test notification time to TZDateTime');
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showTestFailure(_context!, 'Timezone conversion failed');
+        }
         return null;
       }
       
@@ -1638,6 +1874,9 @@ class NotificationService {
       final isScheduled = await isNotificationScheduled(testId);
       if (!isScheduled) {
         debugPrint('Scheduled test notification was not found in pending list');
+        if (_context != null && _context!.mounted) {
+          NotificationDebugSnackbar.showTestFailure(_context!, 'Test notification not scheduled');
+        }
         return null;
       }
       
@@ -1648,6 +1887,9 @@ class NotificationService {
       });
       
       debugPrint('Scheduled test notification sent successfully');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showTestSuccess(_context!);
+      }
       return testId;
     } catch (e, stackTrace) {
       _logError('scheduled_test_notification', e, stackTrace);
@@ -1717,6 +1959,9 @@ class NotificationService {
       
     } catch (e) {
       debugPrint('Error detecting platform compatibility: $e');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showWarning(_context!, 'Could not detect platform capabilities');
+      }
       limitations.add('Could not detect platform capabilities');
     }
 
@@ -1791,6 +2036,9 @@ class NotificationService {
       for (final limitation in compatibility.limitations) {
         debugPrint('  - $limitation');
       }
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showInfo(_context!, 'Platform limitations: ${compatibility.limitations.join(', ')}');
+      }
     }
     
     // Set up fallbacks based on platform capabilities
@@ -1841,6 +2089,9 @@ class NotificationService {
       }
     } catch (e) {
       debugPrint('Error getting version-specific permission status: $e');
+      if (_context != null && _context!.mounted) {
+        NotificationDebugSnackbar.showError(_context!, 'Failed to check permission status');
+      }
     }
 
     return NotificationPermissionStatus.unknown;

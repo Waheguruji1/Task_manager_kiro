@@ -52,6 +52,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       final success = await userStateNotifier.saveUserName(name);
 
       if (success && mounted) {
+        // Invalidate the username provider to ensure fresh data
+        ref.invalidate(userNameProvider);
         ErrorHandler.showSuccessSnackBar(context, 'Welcome, $name!');
         _navigateToMain();
       } else if (mounted) {

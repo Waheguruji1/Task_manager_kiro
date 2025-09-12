@@ -715,52 +715,55 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         AppTheme.spacingS,
         AppTheme.spacingL,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Timezone-based greeting
-          Text(
-            _getGreetingMessage(),
-            style: AppTheme.headingLarge.copyWith(
-              fontSize: 28,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.primaryText,
-            ),
-          ),
-
-          // Username on next line
-          userNameAsync.when(
-            data: (userName) {
-              final displayName =
-                  (userName?.isNotEmpty ?? false) ? userName! : 'there';
-              return Text(
-                '$displayName!',
-                style: AppTheme.headingLarge.copyWith(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.primaryText,
-                ),
-              );
-            },
-            loading: () => Text(
-              'there!',
-              style: AppTheme.headingLarge.copyWith(
-                fontSize: 28,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.primaryText,
-              ),
-            ),
-            error: (_, __) => Text(
-              'there!',
-              style: AppTheme.headingLarge.copyWith(
-                fontSize: 28,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.primaryText,
-              ),
-            ),
-          ),
-        ],
+      child: userNameAsync.when(
+        data: (userName) {
+          final displayName = _getDisplayName(userName);
+          return _buildGreetingColumn(displayName);
+        },
+        loading: () {
+          // Show fallback while loading
+          final displayName = _getDisplayName(null);
+          return _buildGreetingColumn(displayName);
+        },
+        error: (_, __) {
+          // Show fallback on error
+          final displayName = _getDisplayName(null);
+          return _buildGreetingColumn(displayName);
+        },
       ),
+    );
+  }
+
+  /// Get display name with proper fallback handling
+  String _getDisplayName(String? userName) {
+    if (userName != null && userName.trim().isNotEmpty) {
+      return userName.trim();
+    }
+    return 'there';
+  }
+
+  /// Build greeting column widget
+  Widget _buildGreetingColumn(String displayName) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${_getGreetingMessage()},',
+          style: AppTheme.headingLarge.copyWith(
+            fontSize: 28,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.primaryText,
+          ),
+        ),
+        Text(
+          '$displayName!',
+          style: AppTheme.headingLarge.copyWith(
+            fontSize: 28,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.primaryText,
+          ),
+        ),
+      ],
     );
   }
 

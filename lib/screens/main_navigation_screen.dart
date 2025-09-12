@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../utils/theme.dart';
+import '../providers/providers.dart';
 
 import 'home_screen.dart';
 import 'settings_screen.dart';
@@ -31,14 +33,14 @@ class _KeepAliveWrapperState extends State<_KeepAliveWrapper> with AutomaticKeep
 /// Main Navigation Screen with iOS-style bottom tab bar
 /// 
 /// Provides navigation between Home, Stats, and Settings screens
-class MainNavigationScreen extends StatefulWidget {
+class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  ConsumerState<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen> {
+class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   int _currentIndex = 0;
   late PageController _pageController;
 
@@ -120,6 +122,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       _currentIndex = index;
     });
     
+    // Trigger auto-refresh based on selected screen
+    _triggerAutoRefresh(index);
+    
     _pageController.animateToPage(
       index,
       duration: const Duration(milliseconds: 300),
@@ -134,6 +139,29 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     setState(() {
       _currentIndex = index;
     });
+    
+    // Trigger auto-refresh based on selected screen
+    _triggerAutoRefresh(index);
+  }
+
+  /// Trigger auto-refresh for stats and achievements screens
+  void _triggerAutoRefresh(int screenIndex) {
+    final navigationNotifier = ref.read(screenNavigationNotifierProvider.notifier);
+    
+    switch (screenIndex) {
+      case 0: // Home
+        navigationNotifier.navigateToScreen('home');
+        break;
+      case 1: // Stats
+        navigationNotifier.navigateToStats();
+        break;
+      case 2: // Achievements
+        navigationNotifier.navigateToAchievements();
+        break;
+      case 3: // Settings
+        navigationNotifier.navigateToScreen('settings');
+        break;
+    }
   }
 
   @override
